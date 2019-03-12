@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use plist::Value;
 use colored::*;
 use rusqlite::types::ToSql;
+use rusqlite::OpenFlags;
 use rusqlite::{Connection, Result, NO_PARAMS};
 use crypto::digest::Digest;
 use crypto::sha1::Sha1;
@@ -56,24 +57,14 @@ impl Backup<'_> {
     fn parse_manifest(&mut self) -> Result<()> {
         self.files.clear();
 
-        let conn = Connection::open(format!("{}/Manifest.mbdb", self.path.to_str().unwrap())).unwrap();
+        let conn = Connection::open_with_flags(format!("{}/Manifest.db", self.path.to_str().unwrap()), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
 
         let mut stmt = conn.prepare("SELECT * from Files")?;
         let rows = stmt.query_map(NO_PARAMS, |row| {
-
+            // fileid equals sha1(format!("{}-{}", domain, relative_filename))
             let fileid : String = row.get(0)?;
             let domain : String = row.get(1)?;
             let relative_filename : String = row.get(2)?;
-            // create a Sha1 object
-            let mut hasher = Sha1::new();
-
-            // write input message
-            hasher.input_str(&format!("{}-{}", domain, relative_filename));
-
-            // read hash digest
-            let hex = hasher.result_str();
-
-            println!("{} -> {}", fileid, hex);
 
             Ok(BackupFile {
                 fileid,
@@ -121,7 +112,7 @@ struct BackupManifest {
 struct BackupManifestLockdown {
     product_version: String,
     product_type: String,
-    build_version: String,
+    build_version: Option<String>,
     #[serde(alias = "UniqueDeviceID")]
     unique_device_id: String,
     serial_number: String,
@@ -131,37 +122,37 @@ struct BackupManifestLockdown {
 #[derive(Deserialize, Debug)]
 struct BackupInfo {
     #[serde(alias = "Build Version")]
-    build_version: String,
+    build_version: Option<String>,
 
     #[serde(alias = "Device Name")]
-    device_name: String,
+    device_name: Option<String>,
 
     #[serde(alias = "GUID")]
-    guid: String,
+    guid: Option<String>,
 
     #[serde(alias = "ICCID")]
-    iccid: String,
+    iccid: Option<String>,
 
     #[serde(alias = "IMEI")]
-    imei: String,
+    imei: Option<String>,
 
     #[serde(alias = "MEID")]
-    meid: String,
+    meid: Option<String>,
 
     #[serde(alias = "Phone Number")]
-    phone_number: String,
+    phone_number: Option<String>,
 
     #[serde(alias = "Product Type")]
     product_type: String,
 
     #[serde(alias = "Product Name")]
-    product_name: String,
+    product_name: Option<String>,
 
     #[serde(alias = "Product Version")]
     product_version: String,
 
     #[serde(alias = "Serial Number")]
-    serial_number: String,
+    serial_number: Option<String>,
 
     #[serde(alias = "Target Identifier")]
     target_identifier: String,
@@ -170,10 +161,10 @@ struct BackupInfo {
     target_type: String,
 
     #[serde(alias = "Unique Identifier")]
-    unique_identifier: String,
+    unique_identifier: Option<String>,
 
     #[serde(alias = "iTunes Version")]
-    itunes_version: String
+    itunes_version: Option<String>
 }
 
 const BACKUP_DIRECTORY : &'static str = "/Library/Application Support/MobileSync/Backup/";
@@ -204,10 +195,12 @@ fn main() {
     for entry in ls {
         let entry = entry.unwrap();
         if entry.path().is_dir() {
+            println!("{:?}", entry.path());
             let path = entry.path();
             let mut backup : Backup = Backup::new(&path).unwrap();
+            println!("{}", backup.manifest.lockdown.device_name);
             backup.parse_manifest();
-            println!("{:#?}", backup);
+            println!("loaded {} files from manifest", backup.files.len());
         }
     }
 }
