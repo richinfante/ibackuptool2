@@ -15,6 +15,171 @@ extern crate serde;
 use serde::{Deserialize};
 
 #[derive(Debug)]
+enum ClassKeyTypes {
+    UUID,
+    CLAS,
+    WRAP,
+    WPKY,
+    KTYP,
+    PBKY,
+    VERS,
+    TYPE,
+    HMCK,
+    SALT,
+    ITER,
+    DPWT,
+    DPIC,
+    DPSL,
+    Unknown
+}
+
+impl From<&str> for ClassKeyTypes {
+    fn from(string: &str) -> ClassKeyTypes {
+        match string {
+            "CLAS" => ClassKeyTypes::CLAS,
+            "WRAP" => ClassKeyTypes::WRAP,
+            "WPKY" => ClassKeyTypes::WPKY,
+            "KTYP" => ClassKeyTypes::KTYP,
+            "PBKY" => ClassKeyTypes::PBKY,
+            "UUID" => ClassKeyTypes::UUID,
+            "VERS" => ClassKeyTypes::VERS,
+            "TYPE" => ClassKeyTypes::TYPE,
+            "HMCK" => ClassKeyTypes::HMCK,
+            "SALT" => ClassKeyTypes::SALT,
+            "ITER" => ClassKeyTypes::ITER,
+            "DPWT" => ClassKeyTypes::DPWT,
+            "DPIC" => ClassKeyTypes::DPIC,
+            "DPSL" => ClassKeyTypes::DPSL,
+            x => {
+                println!("unknown tag type: {}", x);
+                return ClassKeyTypes::Unknown
+            }
+        }
+    }
+}
+
+#[derive(Debug)]
+enum KeybagTypes {
+    System, Backup, Escrow, iCloud
+}
+
+#[derive(Debug)]
+enum KeyTypes {
+    Aes, Curve25519
+}
+
+
+/// https://stackoverflow.com/questions/1498342/how-to-decrypt-an-encrypted-apple-itunes-iphone-backup
+#[derive(Debug)]
+enum ProtectionClass {
+    NSFileProtectionComplete,
+    NSFileProtectionCompleteUnlessOpen,
+    NSFileProtectionCompleteUntilFirstUserAuthentication,
+    NSFileProtectionNone,
+    NSFileProtectionRecovery,
+    kSecAttrAccessibleWhenUnlocked,
+    kSecAttrAccessibleAfterFirstUnlock,
+    kSecAttrAccessibleAlways,
+    kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
+    kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
+    kSecAttrAccessibleAlwaysThisDeviceOnly,
+    Unknown
+}
+
+impl From<u8> for ProtectionClass {
+    fn from(value: u8) -> ProtectionClass {
+        match value {
+            1  => ProtectionClass::NSFileProtectionComplete,
+            2  => ProtectionClass::NSFileProtectionCompleteUnlessOpen,
+            3  => ProtectionClass::NSFileProtectionCompleteUntilFirstUserAuthentication,
+            4  => ProtectionClass::NSFileProtectionNone,
+            5  => ProtectionClass::NSFileProtectionRecovery,
+            6  => ProtectionClass::kSecAttrAccessibleWhenUnlocked,
+            7  => ProtectionClass::kSecAttrAccessibleAfterFirstUnlock,
+            8  => ProtectionClass::kSecAttrAccessibleAlways,
+            9  => ProtectionClass::kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
+            10 => ProtectionClass::kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
+            11 => ProtectionClass::kSecAttrAccessibleAlwaysThisDeviceOnly,
+            _  => ProtectionClass::Unknown
+            
+        }
+    }
+}
+
+// CLASSKEY_TAGS = ["CLAS","WRAP","WPKY", "KTYP", "PBKY"]  #UUID
+// KEYBAG_TYPES = ["System", "Backup", "Escrow", "OTA (icloud)"]
+// KEY_TYPES = ["AES", "Curve25519"]
+// PROTECTION_CLASSES={
+//     1:"NSFileProtectionComplete",
+//     2:"NSFileProtectionCompleteUnlessOpen",
+//     3:"NSFileProtectionCompleteUntilFirstUserAuthentication",
+//     4:"NSFileProtectionNone",
+//     5:"NSFileProtectionRecovery?",
+
+//     6: "kSecAttrAccessibleWhenUnlocked",
+//     7: "kSecAttrAccessibleAfterFirstUnlock",
+//     8: "kSecAttrAccessibleAlways",
+//     9: "kSecAttrAccessibleWhenUnlockedThisDeviceOnly",
+//     10: "kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly",
+//     11: "kSecAttrAccessibleAlwaysThisDeviceOnly"
+// }
+
+struct BackupKeyBag {
+    // _type: String,
+    // uuid: String,
+    // wrap: String,
+    data: Vec<u8>
+}
+
+enum BackupKeyBagError {
+    ParseLengthError
+}
+
+impl BackupKeyBag {
+    fn get_u8_4(vec: &[u8]) -> Option<[u8; 4]> {
+        if vec.len() < 4 {
+            return None
+        } else {
+            return Some([vec[0], vec[1], vec[2], vec[3]])
+        }
+    }
+    fn parse_tlb_blocks(&self) -> Option<Vec<BackupKeyBagBlock>> {
+        let mut i = 0;
+        let mut blocks = vec![];
+
+        println!("parse tlb blocks: {}", self.data.len());
+        while i + 8 < self.data.len() {
+            let tag = match std::str::from_utf8(&self.data[i..i+4]) {
+                Ok(res) => ClassKeyTypes::from(res),
+                Err(err) => panic!("Error parsing key type: {}")
+            };
+            let x : [u8; 4] = match BackupKeyBag::get_u8_4(&self.data[i+4..i+8]) {
+                Some(el) => el,
+                None => return None
+            };
+            let length = u32::from_be_bytes(x) as usize;
+            let data = Vec::from(&self.data[i+8..i+8+length]);
+
+            println!("tag: {:?}, length: {}",  tag, length);
+            blocks.push(BackupKeyBagBlock {
+                tag, length, data
+            });
+
+            i += 8 + length;
+        }
+
+        Some(blocks)
+    }
+}
+
+#[derive(Debug)]
+struct BackupKeyBagBlock {
+    tag: ClassKeyTypes,
+    length: usize,
+    data: Vec<u8>
+}
+
+#[derive(Debug)]
 struct Backup<'a> {
     path: Box<&'a Path>,
     manifest: BackupManifest,
@@ -39,11 +204,11 @@ enum BackupParseError {
 
 impl Backup<'_> {
     fn new(path: &Path) -> Result<Backup> {
-        let info :BackupInfo = plist::from_file(format!("{}/Info.plist", path.to_str().unwrap())).unwrap();
+        let info : BackupInfo = plist::from_file(format!("{}/Info.plist", path.to_str().unwrap())).unwrap();
 
-        let manifest :BackupManifest = plist::from_file(format!("{}/Manifest.plist", path.to_str().unwrap())).unwrap();
+        let manifest : BackupManifest= plist::from_file(format!("{}/Manifest.plist", path.to_str().unwrap())).unwrap();
 
-        let status :BackupStatus = plist::from_file(format!("{}/Status.plist", path.to_str().unwrap())).unwrap();
+        let status : BackupStatus = plist::from_file(format!("{}/Status.plist", path.to_str().   unwrap())).unwrap();   
 
         Ok(Backup {
             path: Box::new(path.clone()),
@@ -104,7 +269,12 @@ struct BackupManifest {
     date: String,
     system_domains_version: String,
     was_passcode_set: bool,
-    lockdown: BackupManifestLockdown
+    #[serde(with = "serde_bytes")]
+    manifest_key: Vec<u8>,
+
+    lockdown: BackupManifestLockdown,
+    #[serde(with = "serde_bytes")]
+    backup_key_bag: Vec<u8>
 }
 
 #[derive(Deserialize, Debug)]
@@ -198,8 +368,14 @@ fn main() {
             println!("{:?}", entry.path());
             let path = entry.path();
             let mut backup : Backup = Backup::new(&path).unwrap();
-            println!("{}", backup.manifest.lockdown.device_name);
+            println!("{:#?}", backup);
             backup.parse_manifest();
+            let kb = BackupKeyBag {
+                data: backup.manifest.backup_key_bag
+            };
+
+            kb.parse_tlb_blocks();
+            // println!("{:#?}", );
             println!("loaded {} files from manifest", backup.files.len());
         }
     }

@@ -11,3 +11,4 @@ dirs = "1.0.5"
 rust-crypto = "^0.2"
 colored = "1.7"
 serde = { version = "1.0", features = ["derive"] }
+serde_bytes = "0.10.5"
