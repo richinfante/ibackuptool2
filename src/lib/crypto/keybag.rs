@@ -1,22 +1,10 @@
 
-use log::{debug, trace, warn};
+use log::{debug};
 
-use crypto::buffer::BufferResult;
-
-use openssl::symm::{encrypt, decrypt, Cipher};
-use openssl::symm::Mode;
-
-// use crypto::digest::Digest;
-// use crypto::sha1::Sha1;
-// use crypto::sha2::Sha256;
 use uuid::Uuid;
-// use crypto::pbkdf2;
 use hex;
 
 use ring::{digest, pbkdf2};
-use std::{collections::HashMap, num::NonZeroU32};
-
-
 use crate::lib::crypto::*;
 
 
@@ -46,18 +34,12 @@ pub struct KeybagEntry {
     pub key: Option<Vec<u8>>
 }
 
-pub enum BackupKeyBagError {
-    ParseLengthError
-}
-
-
 #[derive(Debug, Clone)]
 pub struct BackupKeyBagBlock {
     tag: KeybagBlockTag,
     length: usize,
     data: Vec<u8>
 }
-
     
 impl KeyBag {
 
@@ -139,8 +121,7 @@ impl KeyBag {
     }
 
     pub fn unlock_with_passcode(&mut self, passcode: &str) {
-        let mac = crypto::sha2::Sha256::new();
-        let sha1 = crypto::sha1::Sha1::new();
+        println!("deriving keys...");
         let mut passcode1 : Vec<u8> = vec![0u8; 32];
         let mut passcode_key : Vec<u8> = vec![0u8; 32];
         
@@ -165,6 +146,8 @@ impl KeyBag {
 
         debug!("3. result = {}", hex::encode(&passcode_key));
         debug!("{:?}", passcode_key);
+
+        println!("deriving keys [done]");
         // crypto::pbkdf2::pbkdf2(&mut mac, &self.double_protection_salt.as_slice(), self.dpic, passcode1.as_mut_slice());
         // crypto::pbkdf2::pbkdf2(&mut sha1, &self.salt.as_slice(), self.iterations, passcode_key.as_mut_slice());
 
@@ -320,7 +303,7 @@ impl KeyBag {
         while i + 8 < data.len() {
             let tag = match std::str::from_utf8(&data[i..i+4]) {
                 Ok(res) => KeybagBlockTag::from(res),
-                Err(err) => panic!("Error parsing key type: {}")
+                Err(err) => panic!("Error parsing key type: {}", err)
             };
             let x : [u8; 4] = match KeyBag::get_u8_4(&data[i+4..i+8]) {
                 Some(el) => el,

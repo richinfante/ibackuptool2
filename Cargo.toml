@@ -15,7 +15,7 @@ serde_bytes = "0.10.5"
 uuid = { version = "0.7", features = ["v4"] }
 hex = "0.3.2"
 ring = "0.14.6"
-openssl = { version = "0.10", features = ["vendored"] }
 log = "0.4.8"
 env_logger = "0.7.0"
 tempdir = "0.3.7"
+rpassword = "4.0.1"

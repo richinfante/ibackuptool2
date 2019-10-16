@@ -105,10 +105,3 @@ impl Backup<'_> {
         
     }
 }
-
-#[derive(Debug)]
-pub enum BackupParseError {
-    ManifestParseFailed,
-    StatusParseFailed,
-    InfoParseFailed
-}

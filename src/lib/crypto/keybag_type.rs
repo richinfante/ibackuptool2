@@ -1,3 +1,5 @@
+#![allow(non_camel_case_types)]
+
 #[derive(Debug, PartialEq)]
 pub enum KeybagTypes {
     System, Backup, Escrow, iCloud, Unknown

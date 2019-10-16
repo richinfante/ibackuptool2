@@ -1,3 +1,4 @@
+#![allow(non_camel_case_types)]
 
 /// https://stackoverflow.com/questions/1498342/how-to-decrypt-an-encrypted-apple-itunes-iphone-backup
 #[derive(Debug, PartialEq)]

@@ -3,7 +3,6 @@
 extern crate log;
 use std::path::Path;
 
-#[macro_use]
 extern crate serde;
 
 mod lib;
@@ -52,7 +51,8 @@ fn main() {
                         backup.parse_keybag().unwrap();
                         debug!("trying decrypt of backup keybag");
                         if let Some(ref mut kb) = backup.manifest.keybag.as_mut() {
-                            kb.unlock_with_passcode("password"); // TODO:
+                            let pass = rpassword::read_password_from_tty(Some("Backup Password: ")).unwrap();
+                            kb.unlock_with_passcode(&pass); // TODO:
                         }
                         backup.manifest.unlock_manifest();
                         backup.parse_manifest().unwrap();

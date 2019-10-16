@@ -1,8 +1,7 @@
-use log::{debug, trace, warn};
+use log::{trace, warn};
 
-use ::crypto::buffer::{BufferResult, RefWriteBuffer, RefReadBuffer};
+use ::crypto::buffer::{RefWriteBuffer, RefReadBuffer};
 
-use crate::lib::*;
 use crate::lib::util::{pack_u64, unpack_64_bit};
 
 /// perform aes_cbc_256
@@ -81,52 +80,18 @@ pub fn unwrap_key(kek: &[u8], wpky: &Vec<u8>) -> Vec<u8> {
             let packed2 = r[i].to_be_bytes();
             packed.extend_from_slice(&packed2);
             trace!("packed component: {:x?}", packed);
-            // debug!("unwrapping key - make ecb");
-            /// TODO: data param is not matching python!!!!!!!!
 
             trace!("key_length: {}", kek.len() * 8);
-            trace!("decrypt(cipher=aes_{}_ecb, kek={}, iv={}, data={}", kek.len() * 8, hex::encode(kek), hex::encode(ZERO_IV), hex::encode(packed.as_slice()));
-            const ZERO_IV : &[u8] = &[0u8; 16];
-            // let cipher = match kek.len() * 8 {
-            //     128 => Cipher::aes_128_ecb(),
-            //     256 => Cipher::aes_256_ecb(),
-            //     _ => panic!("unsupported input key length: {}", kek.len() * 8)
-            // };
-            
-            // let out = decrypt(cipher, kek, Some(ZERO_IV), packed.as_slice());
-            // match out {
-            //     Ok(out) => {
-            //         // let mut dec = crypto::aes::ecb_decryptor(crypto::aes::KeySize::KeySize256, kek, crypto::blockmodes::DecPadding {
-            //         //     padding: crypto::blockmodes::PkcsPadding 
-            //         // });
-            //         // debug!("unwrapping key - setup output");
-            //         // let mut out : Vec<u8> = vec![0u8; 16];
-            //         // let mut output = crypto::buffer::RefWriteBuffer::new(out.as_mut_slice());
-            //         // let mut input = crypto::buffer::RefReadBuffer::new(packed.as_slice());
-            //         // // debug!("unwrapping key - run dec");
-            //         // let result = dec.decrypt(&mut input, &mut output, true);
-            //         a = u64::from_be_bytes(KeyBag::unpack_64_bit(&out.as_slice()[0..8]).unwrap());
-            //         r[i] = u64::from_be_bytes(KeyBag::unpack_64_bit(&out.as_slice()[8..16]).unwrap());
+            trace!("decrypt(cipher=aes_{}_ecb, kek={}, data={}", kek.len() * 8, hex::encode(kek), hex::encode(packed.as_slice()));
 
-            //         debug!("res a: {}", a);
-            //         debug!("res r[i]: {}", r[i]);
-            //         debug!("out: {:?}", out);
-            //     },
-            //     Err(res) => panic!("decrypt err: {}", res)
-            // }
             {
-                // use crypto::symmetriccipher::BlockDecryptor;
-                // let dec = crypto::aessafe::AesSafe256Decryptor::new(kek);
-                // let mut out : Vec<u8> = vec![0u8; 16];
-                // dec.decrypt_block(&packed, &mut out.as_mut_slice());
-                
                 trace!("aes_ecb_256_dec({:x?})", kek);
                 let mut dec = ::crypto::aes::ecb_decryptor(::crypto::aes::KeySize::KeySize256, kek, ::crypto::blockmodes::NoPadding);
-                trace!("unwrapping key - setup output");
+
                 let mut out : Vec<u8> = vec![0u8; 16];
                 let mut output = RefWriteBuffer::new(out.as_mut_slice());
                 let mut input = RefReadBuffer::new(packed.as_slice());
-                // debug!("unwrapping key - run dec");
+
                 let result = dec.decrypt(&mut input, &mut output, true);
                 trace!("is_Err: {}", result.is_err());
                 trace!("res: {}", hex::encode(&out));

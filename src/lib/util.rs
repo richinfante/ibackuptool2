@@ -20,12 +20,16 @@ pub fn unpack_64_bit(val: &[u8]) -> Option<[u8; 8]> {
 }
 
 pub fn as_u32_le(array: &[u8]) -> u32 {
+    if array.len() < 4 {
+        panic!("cannot unpack u32 from smaller buffer.")
+    }
     ((array[0] as u32) <<  0) +
     ((array[1] as u32) <<  8) +
     ((array[2] as u32) << 16) +
     ((array[3] as u32) << 24)
 }
 
+#[allow(dead_code)]
 pub fn as_u32_be(array: &[u8]) -> u32 {
     ((array[0] as u32) << 24) +
     ((array[1] as u32) << 16) +
