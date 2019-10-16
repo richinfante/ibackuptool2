@@ -16,7 +16,7 @@ pub enum KeybagBlockTag {
     DPWT,
     DPIC,
     DPSL,
-    Unknown
+    Unknown,
 }
 
 impl From<&str> for KeybagBlockTag {
@@ -38,7 +38,7 @@ impl From<&str> for KeybagBlockTag {
             "DPSL" => KeybagBlockTag::DPSL,
             x => {
                 warn!("unknown tag type: {}", x);
-                return KeybagBlockTag::Unknown
+                return KeybagBlockTag::Unknown;
             }
         }
     }

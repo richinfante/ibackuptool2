@@ -1,6 +1,8 @@
 #[derive(Debug, PartialEq)]
 pub enum KeyTypes {
-    Aes, Curve25519, Unknown
+    Aes,
+    Curve25519,
+    Unknown,
 }
 
 impl From<u32> for KeyTypes {
@@ -8,7 +10,7 @@ impl From<u32> for KeyTypes {
         match value {
             0 => KeyTypes::Aes,
             1 => KeyTypes::Curve25519,
-            _ => KeyTypes::Unknown
+            _ => KeyTypes::Unknown,
         }
     }
 }

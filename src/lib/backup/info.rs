@@ -45,5 +45,5 @@ pub struct BackupInfo {
     pub unique_identifier: Option<String>,
 
     #[serde(alias = "iTunes Version")]
-    pub itunes_version: Option<String>
+    pub itunes_version: Option<String>,
 }
