@@ -2,7 +2,7 @@ use log::debug;
 
 use serde::{Deserialize};
 use serde_bytes::ByteBuf;
-use crate::types::*;
+use crate::lib::*;
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all="PascalCase")]
@@ -64,7 +64,7 @@ impl BackupManifest {
       let clazz = ProtectionClass::from(protclass);
       let class_key = self.find_class_key(&clazz).unwrap();
       let items : Vec<u8> = mankey.iter().cloned().collect();
-      let result_key = crate::types::crypto::unwrap_key(&class_key, &items);
+      let result_key = crate::lib::crypto::unwrap_key(&class_key, &items);
       self.manifest_key_unwrapped = Some(result_key);
       trace!("unwrapped manifest key: {:x?}", self.manifest_key_unwrapped);
       debug!("unwrapped manifest key successfully!");

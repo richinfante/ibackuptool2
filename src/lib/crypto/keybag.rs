@@ -17,7 +17,7 @@ use ring::{digest, pbkdf2};
 use std::{collections::HashMap, num::NonZeroU32};
 
 
-use crate::types::crypto::*;
+use crate::lib::crypto::*;
 
 
 #[derive(Debug)]
@@ -106,7 +106,7 @@ impl KeyBag {
 
         for key in self.keys.iter_mut() {
             // let k = key.wpky;
-            key.key = Some(crate::types::crypto::aes::unwrap_key(&passcode_key, &key.wpky));   
+            key.key = Some(crate::lib::crypto::aes::unwrap_key(&passcode_key, &key.wpky));   
         }
 
         for key in &self.keys {

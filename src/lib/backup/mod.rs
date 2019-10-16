@@ -7,7 +7,7 @@ pub use manifest::{BackupManifest, BackupManifestLockdown};
 pub use info::{BackupInfo};
 pub use status::BackupStatus;
 pub use file::BackupFile;
-use crate::types::crypto::*;
+use crate::lib::crypto::*;
 
 use std::path::Path;
 
@@ -58,7 +58,7 @@ impl Backup<'_> {
         if self.manifest.is_encrypted {
             let path = format!("{}/Manifest.db", self.path.to_str().unwrap());
             let contents = std::fs::read(Path::new(&path)).unwrap();
-            let dec = crate::types::crypto::decrypt_with_key(&self.manifest.manifest_key_unwrapped.as_ref().unwrap(), &contents);
+            let dec = crate::lib::crypto::decrypt_with_key(&self.manifest.manifest_key_unwrapped.as_ref().unwrap(), &contents);
             debug!("decrypted {} bytes from manifest.", dec.len());
             let home_dir = match dirs::home_dir() {
                 Some(res) => match res.to_str() {

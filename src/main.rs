@@ -6,8 +6,8 @@ use std::path::Path;
 #[macro_use]
 extern crate serde;
 
-mod types;
-use types::*;
+mod lib;
+use lib::*;
 
 const BACKUP_DIRECTORY : &'static str = "/Library/Application Support/MobileSync/Backup/";
 
@@ -43,7 +43,7 @@ fn main() {
             let path = entry.path();
             match Backup::new(&path) {
                 Ok(mut backup) => {
-                    println!("{:#?}", backup);
+                    println!("reading backup {}: {:?} {:?} v{:?}", backup.info.target_identifier, backup.info.device_name, backup.info.product_name, backup.info.product_version);
                     if backup.manifest.is_encrypted {
                         // panic!("Decryption of backups is not yet supported.");
                         // println!("{:#?}", backup);
