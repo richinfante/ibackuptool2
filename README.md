@@ -7,7 +7,7 @@ The goals of this project are:
 - [x] backup manifest / info parsing
 - [ ] backup decryption
   - [x] implement aes key unwrap routines and manifest unlock
-  - [ ] load manifest into memory as decrypted copy
+  - [x] load manifest into memory as decrypted copy
   - [ ] api for file read access
 - [ ] backup file extraction
 - [ ] provide rust library for custom use
