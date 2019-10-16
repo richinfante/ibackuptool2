@@ -9,5 +9,8 @@ pub struct BackupFile {
   pub domain: String,
 
   /// The file path, relative to the domain
-  pub relative_filename: String
+  pub relative_filename: String,
+
+  // File flags
+  pub flags: i64
 }

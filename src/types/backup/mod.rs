@@ -54,11 +54,12 @@ impl Backup<'_> {
     pub fn parse_manifest(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         self.files.clear();
 
+        let conn : Connection;
         if self.manifest.is_encrypted {
             let path = format!("{}/Manifest.db", self.path.to_str().unwrap());
             let contents = std::fs::read(Path::new(&path)).unwrap();
             let dec = crate::types::crypto::decrypt_with_key(&self.manifest.manifest_key_unwrapped.as_ref().unwrap(), &contents);
-            println!("Decrypted {} bytes", dec.len());
+            debug!("decrypted {} bytes from manifest.", dec.len());
             let home_dir = match dirs::home_dir() {
                 Some(res) => match res.to_str() {
                     Some(res) => res.to_string(),
@@ -67,10 +68,15 @@ impl Backup<'_> {
                 None => panic!("Can't find homedir:")
             };
 
-            std::fs::write(Path::new(&format!("{}/Downloads/decrypted_database.sqlite", home_dir)), dec).unwrap();
-        }
+            let pth = format!("{}/Downloads/decrypted_database.sqlite", home_dir);
+            trace!("writing decrypted database: {}", pth);
+            let decpath = Path::new(&pth);
+            std::fs::write(&decpath, dec).unwrap();
 
-        let conn = Connection::open_with_flags(format!("{}/Manifest.db", self.path.to_str().unwrap()), OpenFlags::SQLITE_OPEN_READ_ONLY)?;
+            conn = Connection::open_with_flags(&decpath, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
+        } else {
+            conn = Connection::open_with_flags(format!("{}/Manifest.db", self.path.to_str().unwrap()), OpenFlags::SQLITE_OPEN_READ_ONLY)?;
+        }
 
         let mut stmt = conn.prepare("SELECT * from Files")?;
         let rows = stmt.query_map(NO_PARAMS, |row| {
@@ -78,11 +84,13 @@ impl Backup<'_> {
             let fileid : String = row.get(0)?;
             let domain : String = row.get(1)?;
             let relative_filename : String = row.get(2)?;
+            let flags : i64 = row.get(3)?;
 
             Ok(BackupFile {
                 fileid,
                 domain,
-                relative_filename
+                relative_filename,
+                flags
             })
         })?;
 
