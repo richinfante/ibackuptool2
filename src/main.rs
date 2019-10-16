@@ -22,11 +22,11 @@ fn main() {
 
     let backup_dir = format!("{}{}", home_dir, BACKUP_DIRECTORY);
 
-    println!("using directory: {}", backup_dir);
+    trace!("using src directory: {}", backup_dir);
     let dir = Path::new(&backup_dir);
 
     if dir.is_dir() {
-        println!("exists!");
+        trace!("(backup directory exists!)");
     }
 
     let ls = std::fs::read_dir(dir).unwrap();
@@ -34,7 +34,7 @@ fn main() {
     for entry in ls {
         let entry = entry.unwrap();
         if entry.path().is_dir() {
-            println!("{:?}", entry.path());
+            debug!("reading backup: {:?}", entry.path());
             let path = entry.path();
             match Backup::new(&path) {
                 Ok(mut backup) => {
@@ -56,24 +56,26 @@ fn main() {
                     );
 
                     if backup.manifest.is_encrypted {
-                        // panic!("Decryption of backups is not yet supported.");
-                        // println!("{:#?}", backup);
-                        // let mut kb = KeyBag::init(backup.manifest.backup_key_bag);
-                        // println!("{:#?}", kb);
+                        // Parse the manifest keybag
                         backup.parse_keybag().unwrap();
                         debug!("trying decrypt of backup keybag");
+
+                        // Unlock the keybag with password
                         if let Some(ref mut kb) = backup.manifest.keybag.as_mut() {
                             let pass = rpassword::read_password_from_tty(Some("Backup Password: "))
                                 .unwrap();
                             kb.unlock_with_passcode(&pass); // TODO:
                         }
+
+                        // Unlock the manifest key
                         backup.manifest.unlock_manifest();
+
+                        // Parse the manifest
                         backup.parse_manifest().unwrap();
                     } else {
                         backup.parse_manifest().unwrap();
                     }
 
-                    // println!("{:#?}", kb);
                     println!("loaded {} files from manifest", backup.files.len());
                     println!(
                         "loaded: {} domains from manifest",
