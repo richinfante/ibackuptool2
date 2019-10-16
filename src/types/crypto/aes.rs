@@ -5,6 +5,24 @@ use ::crypto::buffer::{BufferResult, RefWriteBuffer, RefReadBuffer};
 use crate::types::*;
 use crate::types::util::{pack_u64, unpack_64_bit};
 
+pub fn decrypt_with_key(key: &Vec<u8>, data: &Vec<u8>) -> Vec<u8> {
+    const ZERO_IV : &[u8] = &[0u8; 16];
+    let mut dec = ::crypto::aes::ecb_decryptor(
+        ::crypto::aes::KeySize::KeySize256,
+        key.as_slice(),
+        ::crypto::blockmodes::NoPadding
+    );
+    trace!("unwrapping key - setup output");
+    let mut out : Vec<u8> = vec![0u8; data.len()];
+    let mut output = RefWriteBuffer::new(out.as_mut_slice());
+    let mut input = RefReadBuffer::new(data.as_slice());
+    // debug!("unwrapping key - run dec");
+    let result = dec.decrypt(&mut input, &mut output, true);
+    trace!("is_Err: {}", result.is_err());
+    trace!("res: {}", hex::encode(&out));
+    return out
+}
+
 pub fn unwrap_key(kek: &[u8], wpky: &Vec<u8>) -> Vec<u8> {
     trace!("Key: {:x?}", kek);
     trace!("Wrapped: {:x?}", wpky);

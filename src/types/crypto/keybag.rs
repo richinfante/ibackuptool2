@@ -22,28 +22,28 @@ use crate::types::crypto::*;
 
 #[derive(Debug)]
 pub struct KeyBag {
-    kind: KeybagTypes,
-    version: u32,
-    uuid: Uuid,
-    hmck: Vec<u8>,
-    salt: Vec<u8>,
-    double_protection_salt: Option<Vec<u8>>,
-    iterations: Option<u32>,
-    dpwt: Option<u32>,
-    dpic: Option<u32>,
-    wrap: u32,
-    keys: Vec<KeybagEntry>,
-    key: Option<Vec<u8>>
+    pub kind: KeybagTypes,
+    pub version: u32,
+    pub uuid: Uuid,
+    pub hmck: Vec<u8>,
+    pub salt: Vec<u8>,
+    pub double_protection_salt: Option<Vec<u8>>,
+    pub iterations: Option<u32>,
+    pub dpwt: Option<u32>,
+    pub dpic: Option<u32>,
+    pub wrap: u32,
+    pub keys: Vec<KeybagEntry>,
+    pub key: Option<Vec<u8>>
 }
 
 #[derive(Debug)]
 pub struct KeybagEntry {
-    uuid: Uuid,
-    class: ProtectionClass,
-    wrap: u32,
-    key_type: KeyTypes,
-    wpky: Vec<u8>,
-    key: Option<Vec<u8>>
+    pub uuid: Uuid,
+    pub class: ProtectionClass,
+    pub wrap: u32,
+    pub key_type: KeyTypes,
+    pub wpky: Vec<u8>,
+    pub key: Option<Vec<u8>>
 }
 
 pub enum BackupKeyBagError {

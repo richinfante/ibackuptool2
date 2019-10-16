@@ -54,6 +54,8 @@ fn main() {
                         if let Some(ref mut kb) = backup.manifest.keybag.as_mut() {
                             kb.unlock_with_passcode("password"); // TODO:
                         }
+                        backup.manifest.unlock_manifest();
+                        backup.parse_manifest().unwrap();
                     } else {
                         backup.parse_manifest().unwrap();
                     }
