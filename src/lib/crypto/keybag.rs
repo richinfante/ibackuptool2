@@ -91,10 +91,12 @@ impl KeyBag {
             key.key = Some(crate::lib::crypto::aes::unwrap_key(&passcode_key, &key.wpky));   
         }
 
+        println!("unwrapped {} keys.", self.keys.len());
         for key in &self.keys {
+            let classid : u32 = key.class.into();
             match key.key {
-                Some(ref unwrapped) => println!("{}: {:?} - {:?} - {}", key.uuid, key.key_type, key.class, hex::encode(unwrapped)),
-                None => println!("{}: {:?} - {:?} - <none>", key.uuid, key.key_type, key.class)
+                Some(ref unwrapped) => trace!("{}: {:?} - {:?} ({}) - {}", key.uuid, key.key_type, key.class, classid, hex::encode(unwrapped)),
+                None => trace!("{}: {:?} - {:?} ({}) - <none>", key.uuid, key.key_type, key.class, classid)
             }
         }
 
@@ -122,6 +124,8 @@ impl KeyBag {
 
     pub fn unlock_with_passcode(&mut self, passcode: &str) {
         println!("deriving keys...");
+        #[cfg(debug_assertions)]
+        warn!("key derivation is slow in non-release mode.");
         let mut passcode1 : Vec<u8> = vec![0u8; 32];
         let mut passcode_key : Vec<u8> = vec![0u8; 32];
         

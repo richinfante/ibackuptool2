@@ -42,7 +42,14 @@ fn main() {
             let path = entry.path();
             match Backup::new(&path) {
                 Ok(mut backup) => {
-                    println!("reading backup {}: {:?} {:?} v{:?}", backup.info.target_identifier, backup.info.device_name, backup.info.product_name, backup.info.product_version);
+                    println!("reading backup id={}, name={}, product={}, iOS={}, encrypted={:?}", 
+                        backup.info.target_identifier,
+                        &backup.info.device_name.as_ref().unwrap_or(&"<unnamed device>".to_string()),
+                        &backup.info.product_name.as_ref().unwrap_or(&"<unknown product>".to_string()),
+                        backup.info.product_version,
+                        &backup.manifest.is_encrypted
+                    );
+
                     if backup.manifest.is_encrypted {
                         // panic!("Decryption of backups is not yet supported.");
                         // println!("{:#?}", backup);
