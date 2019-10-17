@@ -4,11 +4,12 @@ mod manifest;
 mod status;
 
 use crate::lib::crypto::*;
-pub use file::BackupFile;
+pub use file::{BackupFile, FileInfo};
 pub use info::BackupInfo;
 pub use manifest::{BackupManifest, BackupManifestLockdown};
 pub use status::BackupStatus;
 
+use std::convert::TryFrom;
 use std::path::Path;
 
 use rusqlite::OpenFlags;
@@ -52,6 +53,63 @@ impl Backup<'_> {
         Ok(())
     }
 
+    #[allow(dead_code)]
+    pub fn find_fileid(&self, fileid: &str) -> Option<BackupFile> {
+        for file in &self.files {
+            if file.fileid == fileid {
+                return Some(file.clone());
+            }
+        }
+
+        return None;
+    }
+
+    #[allow(dead_code)]
+    pub fn find_path(&self, domain: &str, path: &str) -> Option<BackupFile> {
+        for file in &self.files {
+            if file.relative_filename == path && file.domain == domain {
+                return Some(file.clone());
+            }
+        }
+
+        return None;
+    }
+
+    #[allow(dead_code)]
+    pub fn read_file(&self, file: &BackupFile) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+        if self.manifest.is_encrypted {
+            let path = format!("{}/Manifest.db", self.path.to_str().unwrap());
+            let contents = std::fs::read(Path::new(&path)).unwrap();
+            let dec = crate::lib::crypto::decrypt_with_key(
+                &self.manifest.manifest_key_unwrapped.as_ref().unwrap(),
+                &contents,
+            );
+
+            return Ok(dec);
+        }
+
+        unimplemented!()
+    }
+
+    /// Unwrap all individual file encryption keys
+    pub fn unwrap_file_keys(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        let keybag = match &self.manifest.keybag {
+            Some(kb) => kb,
+            None => return Ok(()),
+        };
+
+        info!("unwrapping file keys...");
+        for file in self.files.iter_mut() {
+            if file.fileinfo.is_some() {
+                let mutable = file.fileinfo.as_mut();
+                mutable.map(|s| s.unwrap_encryption_key(keybag));
+            }
+        }
+        info!("unwrapping file keys... [done]");
+
+        Ok(())
+    }
+
     /// Load the list of files, from the backup's manifest file.
     pub fn parse_manifest(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         self.files.clear();
@@ -86,19 +144,34 @@ impl Backup<'_> {
             )?;
         }
 
-        let mut stmt = conn.prepare("SELECT * from Files")?;
+        let mut stmt =
+            conn.prepare("SELECT fileid, domain, relativePath, flags, file from Files")?;
         let rows = stmt.query_map(NO_PARAMS, |row| {
             // fileid equals sha1(format!("{}-{}", domain, relative_filename))
             let fileid: String = row.get(0)?;
             let domain: String = row.get(1)?;
             let relative_filename: String = row.get(2)?;
             let flags: i64 = row.get(3)?;
+            let file: Vec<u8> = row.get(4)?;
+            use plist::Value;
+
+            let cur = std::io::Cursor::new(file);
+            let val = Value::from_reader(cur).expect("expected to load bplist");
+
+            let fileinfo = match FileInfo::try_from(val) {
+                Ok(res) => Some(res),
+                Err(err) => {
+                    error!("failed to parse file info: {}", err);
+                    None
+                }
+            };
 
             Ok(BackupFile {
                 fileid,
                 domain,
                 relative_filename,
                 flags,
+                fileinfo,
             })
         })?;
 

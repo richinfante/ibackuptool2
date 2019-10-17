@@ -38,7 +38,7 @@ fn main() {
             let path = entry.path();
             match Backup::new(&path) {
                 Ok(mut backup) => {
-                    println!(
+                    info!(
                         "reading backup id={}, name={}, product={}, iOS={}, encrypted={:?}",
                         backup.info.target_identifier,
                         &backup
@@ -72,17 +72,20 @@ fn main() {
 
                         // Parse the manifest
                         backup.parse_manifest().unwrap();
+
+                        // now, unwrap all file keys in preparation of doing things; we can do this on a file-by-file basis also.
+                        backup.unwrap_file_keys().unwrap();
                     } else {
                         backup.parse_manifest().unwrap();
                     }
 
-                    println!("loaded {} files from manifest", backup.files.len());
-                    println!(
+                    info!("loaded {} files from manifest", backup.files.len());
+                    info!(
                         "loaded: {} domains from manifest",
                         list_domains(&backup).len()
                     );
                 }
-                Err(err) => println!("failed to load {}: {:?}", err, path),
+                Err(err) => info!("failed to load {}: {:?}", err, path),
             };
         }
     }

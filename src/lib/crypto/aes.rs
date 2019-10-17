@@ -114,8 +114,8 @@ pub fn unwrap_key(kek: &[u8], wpky: &Vec<u8>) -> Vec<u8> {
     }
 
     if a != 0xa6a6a6a6a6a6a6a6 {
-        warn!("got iv: 0x{:x} {}", a, a);
-        panic!("unexpected resulant iv");
+        warn!("got iv: 0x{:x}, expected: 0xa6a6a6a6a6a6a6a6", a);
+        panic!("unexpected resulant iv. this is usually caused by an invalid password to the backup. If this occcurs midaway through an operation, please file an issue on the project issue tracker.");
     }
 
     let mut result: Vec<u8> = Vec::new();

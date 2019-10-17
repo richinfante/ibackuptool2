@@ -6,7 +6,7 @@ edition = "2018"
 
 [dependencies]
 rusqlite = "0.17.0"
-plist = "0.4.1"
+plist = "0.5.1"
 dirs = "1.0.5"
 rust-crypto = "^0.2"
 colored = "1.7"

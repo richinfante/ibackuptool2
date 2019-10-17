@@ -22,6 +22,19 @@ pub struct KeyBag {
     pub key: Option<Vec<u8>>,
 }
 
+impl KeyBag {
+    /// Find unwrapped key for a protection class.
+    /// Requires the backup be unlocked first.
+    pub fn find_class_key(&self, class: &ProtectionClass) -> Option<Vec<u8>> {
+        for ref key in &self.keys {
+            if key.class == *class {
+                return key.key.clone();
+            }
+        }
+
+        None
+    }
+}
 #[derive(Debug)]
 pub struct KeybagEntry {
     pub uuid: Uuid,
@@ -91,7 +104,7 @@ impl KeyBag {
             ));
         }
 
-        println!("unwrapped {} keys.", self.keys.len());
+        info!("unwrapped {} keys.", self.keys.len());
         for key in &self.keys {
             let classid: u32 = key.class.into();
             match key.key {
@@ -136,7 +149,7 @@ impl KeyBag {
     }
 
     pub fn unlock_with_passcode(&mut self, passcode: &str) {
-        println!("deriving keys...");
+        info!("deriving keys...");
         #[cfg(debug_assertions)]
         warn!("key derivation is slow in non-release mode.");
         let mut passcode1: Vec<u8> = vec![0u8; 32];
@@ -180,7 +193,7 @@ impl KeyBag {
         debug!("3. result = {}", hex::encode(&passcode_key));
         debug!("{:?}", passcode_key);
 
-        println!("deriving keys [done]");
+        info!("deriving keys [done]");
         // crypto::pbkdf2::pbkdf2(&mut mac, &self.double_protection_salt.as_slice(), self.dpic, passcode1.as_mut_slice());
         // crypto::pbkdf2::pbkdf2(&mut sha1, &self.salt.as_slice(), self.iterations, passcode_key.as_mut_slice());
 
