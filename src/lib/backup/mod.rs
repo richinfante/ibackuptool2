@@ -77,18 +77,23 @@ impl Backup<'_> {
 
     #[allow(dead_code)]
     pub fn read_file(&self, file: &BackupFile) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+        let path = format!("{}/{}/{}", self.path.to_str().unwrap(), (&file.fileid)[0..2].to_string(), file.fileid);
+        let contents = std::fs::read(Path::new(&path)).unwrap();
+
+        // if the file 
         if self.manifest.is_encrypted {
-            let path = format!("{}/Manifest.db", self.path.to_str().unwrap());
-            let contents = std::fs::read(Path::new(&path)).unwrap();
             let dec = crate::lib::crypto::decrypt_with_key(
-                &self.manifest.manifest_key_unwrapped.as_ref().unwrap(),
+                &file.fileinfo.as_ref().unwrap().encryption_key.as_ref().unwrap(),
                 &contents,
             );
 
             return Ok(dec);
         }
 
-        unimplemented!()
+        return match std::fs::read(Path::new(&path)) {
+            Ok(vec) => Ok(vec),
+            Err(err) => Err(err.into())
+        };
     }
 
     /// Unwrap all individual file encryption keys
