@@ -77,17 +77,40 @@ impl Backup<'_> {
 
     #[allow(dead_code)]
     pub fn read_file(&self, file: &BackupFile) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-        let path = format!("{}/{}/{}", self.path.to_str().unwrap(), (&file.fileid)[0..2].to_string(), file.fileid);
-        let contents = std::fs::read(Path::new(&path)).unwrap();
+        let path = format!("{}/{}/{}", self.path.to_str().expect("path to be str"), (&file.fileid)[0..2].to_string(), file.fileid);
+        let finpath = self.path.join(Path::new(&path));
+
+        debug!("read file path: {}", finpath.display());
+
+        if !finpath.is_file() {
+            return Err(crate::lib::error::BackupError::InManifestButNotFound.into());
+        }
+
+        
+        let contents = std::fs::read(finpath).expect("contents to exist");
 
         // if the file 
         if self.manifest.is_encrypted {
-            let dec = crate::lib::crypto::decrypt_with_key(
-                &file.fileinfo.as_ref().unwrap().encryption_key.as_ref().unwrap(),
-                &contents,
-            );
-
-            return Ok(dec);
+            match &file.fileinfo.as_ref() {
+                Some(fileinfo) => {
+                    match fileinfo.encryption_key.as_ref() {
+                        Some(encryption_key) => {
+                            let dec = crate::lib::crypto::decrypt_with_key(
+                                &encryption_key,
+                                &contents,
+                            );
+                
+                            return Ok(dec);
+                        },
+                        None => {
+                            return Err(crate::lib::error::BackupError::NoEncryptionKey.into());
+                        }
+                    }
+                },
+                None => {
+                    return Err(crate::lib::error::BackupError::NoFileInfo.into());
+                }
+            }
         }
 
         return match std::fs::read(Path::new(&path)) {
