@@ -77,7 +77,12 @@ impl Backup<'_> {
 
     #[allow(dead_code)]
     pub fn read_file(&self, file: &BackupFile) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-        let path = format!("{}/{}/{}", self.path.to_str().expect("path to be str"), (&file.fileid)[0..2].to_string(), file.fileid);
+        let path = format!(
+            "{}/{}/{}",
+            self.path.to_str().expect("path to be str"),
+            (&file.fileid)[0..2].to_string(),
+            file.fileid
+        );
         let finpath = self.path.join(Path::new(&path));
 
         debug!("read file path: {}", finpath.display());
@@ -86,25 +91,19 @@ impl Backup<'_> {
             return Err(crate::lib::error::BackupError::InManifestButNotFound.into());
         }
 
-        
         let contents = std::fs::read(finpath).expect("contents to exist");
 
-        // if the file 
+        // if the file
         if self.manifest.is_encrypted {
             match &file.fileinfo.as_ref() {
-                Some(fileinfo) => {
-                    match fileinfo.encryption_key.as_ref() {
-                        Some(encryption_key) => {
-                            let dec = crate::lib::crypto::decrypt_with_key(
-                                &encryption_key,
-                                &contents,
-                            );
-                
-                            return Ok(dec);
-                        },
-                        None => {
-                            return Err(crate::lib::error::BackupError::NoEncryptionKey.into());
-                        }
+                Some(fileinfo) => match fileinfo.encryption_key.as_ref() {
+                    Some(encryption_key) => {
+                        let dec = crate::lib::crypto::decrypt_with_key(&encryption_key, &contents);
+
+                        return Ok(dec);
+                    }
+                    None => {
+                        return Err(crate::lib::error::BackupError::NoEncryptionKey.into());
                     }
                 },
                 None => {
@@ -115,7 +114,7 @@ impl Backup<'_> {
 
         return match std::fs::read(Path::new(&path)) {
             Ok(vec) => Ok(vec),
-            Err(err) => Err(err.into())
+            Err(err) => Err(err.into()),
         };
     }
 

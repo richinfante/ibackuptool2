@@ -5,7 +5,7 @@ use std::path::Path;
 extern crate serde;
 
 extern crate clap;
-use clap::{Arg, App, SubCommand};
+use clap::{App, Arg, SubCommand};
 
 mod lib;
 use lib::*;
@@ -16,39 +16,48 @@ fn main() {
     env_logger::init();
 
     let matches = App::new("ibackuptool2")
-                        .version("1.0")
-                        .author("Rich <rich@richinfante.com>")
-                        .about("iOS Backup Utilities")
-                        .arg(Arg::with_name("dir")
-                            .short("d")
-                            .long("directory")
-                            .value_name("DIR")
-                            .help("Sets a custom backup origin folder.")
-                            .takes_value(true))
-                        .subcommand(SubCommand::with_name("ls")
-                                    .about("lists backups or files within a backup"))
-                        .subcommand(SubCommand::with_name("ls-files")
-                            .arg(Arg::with_name("backup")
-                            .short("b")
-                            .long("backup")
-                            .value_name("BACKUP")
-                            .help("Sets a custom backup name / path. prepended to --directory.")
-                            .takes_value(true)))
-                        .subcommand(SubCommand::with_name("extract")
-                            .arg(Arg::with_name("backup")
-                                .short("b")
-                                .long("backup")
-                                .value_name("BACKUP")
-                                .help("Sets a custom backup name / path. prepended to --directory.")
-                                .takes_value(true))
-                            .arg(Arg::with_name("dest")
-                                .short("o")
-                                .long("dest")
-                                .value_name("DEST")
-                                .help("Extract Destination.")
-                                .takes_value(true))
-                        )
-                        .get_matches();
+        .version("1.0")
+        .author("Rich <rich@richinfante.com>")
+        .about("iOS Backup Utilities")
+        .arg(
+            Arg::with_name("dir")
+                .short("d")
+                .long("directory")
+                .value_name("DIR")
+                .help("Sets a custom backup origin folder.")
+                .takes_value(true),
+        )
+        .subcommand(SubCommand::with_name("ls").about("lists backups or files within a backup"))
+        .subcommand(
+            SubCommand::with_name("ls-files").arg(
+                Arg::with_name("backup")
+                    .short("b")
+                    .long("backup")
+                    .value_name("BACKUP")
+                    .help("Sets a custom backup name / path. prepended to --directory.")
+                    .takes_value(true),
+            ),
+        )
+        .subcommand(
+            SubCommand::with_name("extract")
+                .arg(
+                    Arg::with_name("backup")
+                        .short("b")
+                        .long("backup")
+                        .value_name("BACKUP")
+                        .help("Sets a custom backup name / path. prepended to --directory.")
+                        .takes_value(true),
+                )
+                .arg(
+                    Arg::with_name("dest")
+                        .short("o")
+                        .long("dest")
+                        .value_name("DEST")
+                        .help("Extract Destination.")
+                        .takes_value(true),
+                ),
+        )
+        .get_matches();
 
     // Gets a value for config if supplied by user, or defaults to "default.conf"
     // let config = matches.value_of("config").unwrap_or("default.conf");
@@ -75,11 +84,9 @@ fn main() {
         trace!("(backup directory exists!)");
     }
 
-
     // You can handle information about subcommands by requesting their matches by name
     // (as below), requesting just the name used, or both at the same time
     if let Some(matches) = matches.subcommand_matches("ls") {
-
         let ls = std::fs::read_dir(dir).unwrap();
 
         for entry in ls {
@@ -141,7 +148,6 @@ fn main() {
                 };
             }
         }
-            
     }
 
     if let Some(matches) = matches.subcommand_matches("ls-files") {
@@ -199,7 +205,10 @@ fn main() {
                     );
 
                     for file in backup.files {
-                        println!("{}: {}, {}", file.fileid, file.domain, file.relative_filename);
+                        println!(
+                            "{}: {}, {}",
+                            file.fileid, file.domain, file.relative_filename
+                        );
                     }
                 }
                 Err(err) => info!("failed to load {}: {:?}", err, path),
@@ -207,7 +216,6 @@ fn main() {
         } else {
             error!("path is not a directory: {}", path.display());
         }
-            
     }
 
     if let Some(matches) = matches.subcommand_matches("extract") {
@@ -269,16 +277,18 @@ fn main() {
                     std::fs::create_dir_all(&basepath);
 
                     for file in &backup.files {
-                        let filepath = basepath.join(Path::new(&file.domain)).join(Path::new(&file.relative_filename));
+                        let filepath = basepath
+                            .join(Path::new(&file.domain))
+                            .join(Path::new(&file.relative_filename));
 
                         match &backup.read_file(&file) {
                             Ok(res) => {
                                 std::fs::create_dir_all(&filepath.parent().unwrap());
                                 println!("extract: {}: {} bytes", filepath.display(), res.len());
                                 std::fs::write(filepath, res);
-                            },
+                            }
                             Err(err) => {
-                                error!("failed to extract: {}: {}", filepath.display(), err);       
+                                error!("failed to extract: {}: {}", filepath.display(), err);
                             }
                         }
                         // println!("{}: {}, {}", file.fileid, file.domain, file.relative_filename);
@@ -289,7 +299,6 @@ fn main() {
         } else {
             error!("path is not a directory: {}", path.display());
         }
-            
     }
 }
 
@@ -298,7 +307,7 @@ fn find_useful_folder(dirname: &str) -> std::path::PathBuf {
 
     println!("useful? {:?}", path.display());
     if path.is_dir() {
-        return dirname.into()
+        return dirname.into();
     }
 
     let home_dir = match dirs::home_dir() {
@@ -311,10 +320,9 @@ fn find_useful_folder(dirname: &str) -> std::path::PathBuf {
 
     let backup_dir = format!("{}{}", home_dir, BACKUP_DIRECTORY);
 
-    
     let dir = Path::new(&backup_dir);
 
-    return dir.join(Path::new(dirname))
+    return dir.join(Path::new(dirname));
 }
 
 fn list_domains(backup: &Backup) -> Vec<String> {
