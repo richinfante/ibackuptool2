@@ -1,4 +1,5 @@
 use std::io::Write;
+use crate::lib::*;
 
 pub struct OutFile {
   pub filename: String,
@@ -42,16 +43,11 @@ impl std::io::Write for OutFile {
   fn by_ref(&mut self) -> &mut Self where Self: Sized { self }
 }
 
-impl OutFile {
-  fn do_thing(&mut self) {
-    self.contents.write(&[0u8, 0xffu8]);
-  }
-}
 trait JSONOutput {
   fn to_json(&self) -> Vec<OutFile>;
 }
 
 trait TextOutput {
-  fn to_text(&self) -> Vec<OutFile>;
+  fn to_text(&self, backup: &Backup) -> Vec<OutFile>;
 }
 
