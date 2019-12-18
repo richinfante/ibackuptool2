@@ -231,8 +231,10 @@ impl SMSReader {
       chats
     })
   }
+}
 
-  pub fn dump_sms_txt(&self, backup: &Backup) -> Result<Vec<OutFile>, Box<dyn std::error::Error>> {
+impl TextOutputFormat for SMSReader {
+  fn to_text(&self, backup: &Backup) -> Result<Vec<OutFile>, Box<dyn std::error::Error>> {
     let addrproxy = SqliteProxy::new(backup, "HomeDomain", "Library/AddressBook/AddressBook.sqlitedb")?;
     let book = crate::infodump::address::load_address_book(&addrproxy.connection)?;
     let index = book.into_index();
@@ -266,7 +268,7 @@ impl SMSReader {
         let timestamp_str = datetime.format("%Y-%m-%d %H:%M:%S.%f").to_string();
         
         // Output the final message to the terminal.
-        writeln!(outfile, "{}: {}: {}: {}", timestamp_str, &chat_name_display, sender_name, message.text.as_ref().unwrap_or(&"(no content)".to_string()));
+        writeln!(outfile, "{}: {}: {}: {}", timestamp_str, &chat_name_display, sender_name, message.text.as_ref().unwrap_or(&"(no content)".to_string()))?;
         // println!("{}: {}: {}: {}", timestamp_str, &chat_name_display, sender_name, message.text.unwrap_or("(no content)".to_string()));
       }
 

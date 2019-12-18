@@ -11,6 +11,7 @@ mod lib;
 use lib::*;
 use std::io::Write;
 mod infodump;
+use infodump::outputformat::*;
 
 const BACKUP_DIRECTORY: &'static str = "/Library/Application Support/MobileSync/Backup/";
 
@@ -395,7 +396,7 @@ fn main() {
                     }
 
                     let smsr = infodump::SMSReader::load(&backup).unwrap();
-                    let files = smsr.dump_sms_txt(&backup).unwrap();
+                    let files = smsr.to_text(&backup).unwrap();
 
                     for file in files {
                         std::fs::write(dest.join(Path::new("sms/")).join(Path::new(&file.filename)), file.contents()).unwrap();

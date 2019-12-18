@@ -43,11 +43,11 @@ impl std::io::Write for OutFile {
   fn by_ref(&mut self) -> &mut Self where Self: Sized { self }
 }
 
-trait JSONOutput {
-  fn to_json(&self) -> Vec<OutFile>;
+pub trait JSONOutputFormat {
+  fn to_json(&self) -> Result<Vec<OutFile>, Box<dyn std::error::Error>>;
 }
 
-trait TextOutput {
-  fn to_text(&self, backup: &Backup) -> Vec<OutFile>;
+pub trait TextOutputFormat {
+  fn to_text(&self, backup: &Backup) -> Result<Vec<OutFile>, Box<dyn std::error::Error>>;
 }
 
