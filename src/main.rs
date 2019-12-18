@@ -23,7 +23,6 @@ fn main() {
 
     builder.init();
 
-
     let matches = App::new("ibackuptool2")
         .version("1.0")
         .author("Rich <rich@richinfante.com>")
@@ -49,56 +48,56 @@ fn main() {
         )
         .subcommand(
             SubCommand::with_name("infodump")
-            .arg(
-                Arg::with_name("BACKUP")
-                    .short("b")
-                    .long("backup")
-                    .value_name("BACKUP")
-                    .help("Sets a custom backup name / path. prepended to --directory.")
-                    .takes_value(true),
-            )
-            .arg(
-                Arg::with_name("FORMAT")
-                    .short("f")
-                    .long("format")
-                    .value_name("FORMAT")
-                    .possible_values(&["json", "csv", "txt"])
-                    .help("Raw infodump capabilities.")
-                    .takes_value(true),
-            )
-            .arg(
-                Arg::with_name("DEST")
-                    .short("o")
-                    .long("dest")
-                    .value_name("DEST")
-                    .help("Extract Destination.")
-                    .takes_value(true),
-            ),
+                .arg(
+                    Arg::with_name("BACKUP")
+                        .short("b")
+                        .long("backup")
+                        .value_name("BACKUP")
+                        .help("Sets a custom backup name / path. prepended to --directory.")
+                        .takes_value(true),
+                )
+                .arg(
+                    Arg::with_name("FORMAT")
+                        .short("f")
+                        .long("format")
+                        .value_name("FORMAT")
+                        .possible_values(&["json", "csv", "txt"])
+                        .help("Raw infodump capabilities.")
+                        .takes_value(true),
+                )
+                .arg(
+                    Arg::with_name("DEST")
+                        .short("o")
+                        .long("dest")
+                        .value_name("DEST")
+                        .help("Extract Destination.")
+                        .takes_value(true),
+                ),
         )
         .subcommand(
             SubCommand::with_name("find")
-            .arg(
-                Arg::with_name("BACKUP")
-                    .short("b")
-                    .long("backup")
-                    .value_name("BACKUP")
-                    .help("Sets a custom backup name / path. prepended to --directory.")
-                    .takes_value(true),
-            )
-            .arg(
-                Arg::with_name("PATH")
-                    .long("path")
-                    .value_name("PATH")
-                    .help("The relativeFilename to find")
-                    .takes_value(true)
-            )
-            .arg(
-                Arg::with_name("DOMAIN")
-                    .long("domain")
-                    .value_name("DOMAIN")
-                    .help("The domain to find")
-                    .takes_value(true),
-            ),
+                .arg(
+                    Arg::with_name("BACKUP")
+                        .short("b")
+                        .long("backup")
+                        .value_name("BACKUP")
+                        .help("Sets a custom backup name / path. prepended to --directory.")
+                        .takes_value(true),
+                )
+                .arg(
+                    Arg::with_name("PATH")
+                        .long("path")
+                        .value_name("PATH")
+                        .help("The relativeFilename to find")
+                        .takes_value(true),
+                )
+                .arg(
+                    Arg::with_name("DOMAIN")
+                        .long("domain")
+                        .value_name("DOMAIN")
+                        .help("The domain to find")
+                        .takes_value(true),
+                ),
         )
         .subcommand(
             SubCommand::with_name("extract")
@@ -325,10 +324,12 @@ fn main() {
                         backup.parse_manifest().unwrap();
                     }
 
-                    let mut file = backup.find_path(
-                        matches.value_of("DOMAIN").expect("--domain to be provided"),
-                        matches.value_of("PATH").expect("--path to be provided")
-                    ).expect("File to exist");
+                    let mut file = backup
+                        .find_path(
+                            matches.value_of("DOMAIN").expect("--domain to be provided"),
+                            matches.value_of("PATH").expect("--path to be provided"),
+                        )
+                        .expect("File to exist");
 
                     if backup.manifest.is_encrypted {
                         file.unwrap_file_key(&backup);
@@ -336,10 +337,10 @@ fn main() {
 
                     match backup.read_file(&file) {
                         Ok(contents) => match std::io::stdout().write(&contents) {
-                            Ok(_) => {},
-                            Err(err) => error!("error: {}", err)    
+                            Ok(_) => {}
+                            Err(err) => error!("error: {}", err),
                         },
-                        Err(err) => error!("error: {}", err)
+                        Err(err) => error!("error: {}", err),
                     }
                 }
                 Err(err) => info!("failed to load {}: {:?}", err, path),
@@ -399,7 +400,11 @@ fn main() {
                     let files = smsr.to_text(&backup).unwrap();
 
                     for file in files {
-                        std::fs::write(dest.join(Path::new("sms/")).join(Path::new(&file.filename)), file.contents()).unwrap();
+                        std::fs::write(
+                            dest.join(Path::new("sms/")).join(Path::new(&file.filename)),
+                            file.contents(),
+                        )
+                        .unwrap();
                     }
                 }
                 Err(err) => info!("failed to load {}: {:?}", err, path),

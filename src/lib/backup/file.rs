@@ -89,13 +89,13 @@ impl BackupFile {
     pub fn unwrap_file_key(&mut self, backup: &Backup) {
         let keybag = match backup.get_keybag() {
             Some(kb) => kb,
-            None => { return }
+            None => return,
         };
-        
+
         match self.fileinfo.as_mut() {
             Some(fileinfo) => {
                 fileinfo.unwrap_encryption_key(keybag);
-            },
+            }
             None => {}
         }
     }
