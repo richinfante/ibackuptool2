@@ -350,6 +350,7 @@ fn main() {
 
     if let Some(matches) = matches.subcommand_matches("infodump") {
         let pathloc = matches.value_of("BACKUP").unwrap();
+        let dest = Path::new(matches.value_of("DEST").unwrap());
         let path = find_useful_folder(pathloc);
         if path.is_dir() {
             debug!("reading backup: {:?}", &path);
@@ -397,7 +398,7 @@ fn main() {
                     let files = smsr.dump_sms_txt(&backup).unwrap();
 
                     for file in files {
-                        std::fs::write(&file.filename, file.contents()).unwrap();
+                        std::fs::write(dest.join(Path::new(&file.filename)), file.contents()).unwrap();
                     }
                 }
                 Err(err) => info!("failed to load {}: {:?}", err, path),
