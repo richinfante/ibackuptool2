@@ -9,18 +9,26 @@ use clap::{App, Arg, SubCommand};
 
 mod lib;
 use lib::*;
+use std::io::Write;
+mod infodump;
 
 const BACKUP_DIRECTORY: &'static str = "/Library/Application Support/MobileSync/Backup/";
 
 fn main() {
-    env_logger::init();
+    use env_logger::{Builder, Target};
+
+    let mut builder = Builder::from_default_env();
+    builder.target(Target::Stderr);
+
+    builder.init();
+
 
     let matches = App::new("ibackuptool2")
         .version("1.0")
         .author("Rich <rich@richinfante.com>")
         .about("iOS Backup Utilities")
         .arg(
-            Arg::with_name("dir")
+            Arg::with_name("DIR")
                 .short("d")
                 .long("directory")
                 .value_name("DIR")
@@ -30,7 +38,7 @@ fn main() {
         .subcommand(SubCommand::with_name("ls").about("lists backups or files within a backup"))
         .subcommand(
             SubCommand::with_name("ls-files").arg(
-                Arg::with_name("backup")
+                Arg::with_name("BACKUP")
                     .short("b")
                     .long("backup")
                     .value_name("BACKUP")
@@ -39,9 +47,62 @@ fn main() {
             ),
         )
         .subcommand(
+            SubCommand::with_name("infodump")
+            .arg(
+                Arg::with_name("BACKUP")
+                    .short("b")
+                    .long("backup")
+                    .value_name("BACKUP")
+                    .help("Sets a custom backup name / path. prepended to --directory.")
+                    .takes_value(true),
+            )
+            .arg(
+                Arg::with_name("FORMAT")
+                    .short("f")
+                    .long("format")
+                    .value_name("FORMAT")
+                    .possible_values(&["json", "csv", "txt"])
+                    .help("Raw infodump capabilities.")
+                    .takes_value(true),
+            )
+            .arg(
+                Arg::with_name("DEST")
+                    .short("o")
+                    .long("dest")
+                    .value_name("DEST")
+                    .help("Extract Destination.")
+                    .takes_value(true),
+            ),
+        )
+        .subcommand(
+            SubCommand::with_name("find")
+            .arg(
+                Arg::with_name("BACKUP")
+                    .short("b")
+                    .long("backup")
+                    .value_name("BACKUP")
+                    .help("Sets a custom backup name / path. prepended to --directory.")
+                    .takes_value(true),
+            )
+            .arg(
+                Arg::with_name("PATH")
+                    .long("path")
+                    .value_name("PATH")
+                    .help("The relativeFilename to find")
+                    .takes_value(true)
+            )
+            .arg(
+                Arg::with_name("DOMAIN")
+                    .long("domain")
+                    .value_name("DOMAIN")
+                    .help("The domain to find")
+                    .takes_value(true),
+            ),
+        )
+        .subcommand(
             SubCommand::with_name("extract")
                 .arg(
-                    Arg::with_name("backup")
+                    Arg::with_name("BACKUP")
                         .short("b")
                         .long("backup")
                         .value_name("BACKUP")
@@ -49,7 +110,7 @@ fn main() {
                         .takes_value(true),
                 )
                 .arg(
-                    Arg::with_name("dest")
+                    Arg::with_name("DEST")
                         .short("o")
                         .long("dest")
                         .value_name("DEST")
@@ -151,7 +212,7 @@ fn main() {
     }
 
     if let Some(matches) = matches.subcommand_matches("ls-files") {
-        let pathloc = matches.value_of("backup").unwrap();
+        let pathloc = matches.value_of("BACKUP").unwrap();
         let path = find_useful_folder(pathloc);
         if path.is_dir() {
             debug!("reading backup: {:?}", &path);
@@ -218,9 +279,137 @@ fn main() {
         }
     }
 
+    if let Some(matches) = matches.subcommand_matches("find") {
+        let pathloc = matches.value_of("BACKUP").unwrap();
+        let path = find_useful_folder(pathloc);
+        if path.is_dir() {
+            debug!("reading backup: {:?}", &path);
+            match Backup::new(&path) {
+                Ok(mut backup) => {
+                    debug!(
+                        "reading backup id={}, name={}, product={}, iOS={}, encrypted={:?}",
+                        backup.info.target_identifier,
+                        &backup
+                            .info
+                            .device_name
+                            .as_ref()
+                            .unwrap_or(&"<unnamed device>".to_string()),
+                        &backup
+                            .info
+                            .product_name
+                            .as_ref()
+                            .unwrap_or(&"<unknown product>".to_string()),
+                        backup.info.product_version,
+                        &backup.manifest.is_encrypted
+                    );
+
+                    if backup.manifest.is_encrypted {
+                        // Parse the manifest keybag
+                        backup.parse_keybag().unwrap();
+                        debug!("trying decrypt of backup keybag");
+
+                        // Unlock the keybag with password
+                        if let Some(ref mut kb) = backup.manifest.keybag.as_mut() {
+                            let pass = rpassword::read_password_from_tty(Some("Backup Password: "))
+                                .unwrap();
+                            kb.unlock_with_passcode(&pass); // TODO:
+                        }
+
+                        // Unlock the manifest key
+                        backup.manifest.unlock_manifest();
+
+                        // Parse the manifest
+                        backup.parse_manifest().unwrap();
+                    } else {
+                        backup.parse_manifest().unwrap();
+                    }
+
+                    let mut file = backup.find_path(
+                        matches.value_of("DOMAIN").expect("--domain to be provided"),
+                        matches.value_of("PATH").expect("--path to be provided")
+                    ).expect("File to exist");
+
+                    if backup.manifest.is_encrypted {
+                        file.unwrap_file_key(&backup);
+                    }
+
+                    match backup.read_file(&file) {
+                        Ok(contents) => match std::io::stdout().write(&contents) {
+                            Ok(_) => {},
+                            Err(err) => error!("error: {}", err)    
+                        },
+                        Err(err) => error!("error: {}", err)
+                    }
+                }
+                Err(err) => info!("failed to load {}: {:?}", err, path),
+            };
+        } else {
+            error!("path is not a directory: {}", path.display());
+        }
+    }
+
+    if let Some(matches) = matches.subcommand_matches("infodump") {
+        let pathloc = matches.value_of("BACKUP").unwrap();
+        let path = find_useful_folder(pathloc);
+        if path.is_dir() {
+            debug!("reading backup: {:?}", &path);
+            match Backup::new(&path) {
+                Ok(mut backup) => {
+                    debug!(
+                        "reading backup id={}, name={}, product={}, iOS={}, encrypted={:?}",
+                        backup.info.target_identifier,
+                        &backup
+                            .info
+                            .device_name
+                            .as_ref()
+                            .unwrap_or(&"<unnamed device>".to_string()),
+                        &backup
+                            .info
+                            .product_name
+                            .as_ref()
+                            .unwrap_or(&"<unknown product>".to_string()),
+                        backup.info.product_version,
+                        &backup.manifest.is_encrypted
+                    );
+
+                    if backup.manifest.is_encrypted {
+                        // Parse the manifest keybag
+                        backup.parse_keybag().unwrap();
+                        debug!("trying decrypt of backup keybag");
+
+                        // Unlock the keybag with password
+                        if let Some(ref mut kb) = backup.manifest.keybag.as_mut() {
+                            let pass = rpassword::read_password_from_tty(Some("Backup Password: "))
+                                .unwrap();
+                            kb.unlock_with_passcode(&pass); // TODO:
+                        }
+
+                        // Unlock the manifest key
+                        backup.manifest.unlock_manifest();
+
+                        // Parse the manifest
+                        backup.parse_manifest().unwrap();
+                    } else {
+                        backup.parse_manifest().unwrap();
+                    }
+
+                    let smsr = infodump::SMSReader::load(&backup).unwrap();
+                    let files = smsr.dump_sms_txt(&backup).unwrap();
+
+                    for file in files {
+                        std::fs::write(&file.filename, file.contents()).unwrap();
+                    }
+                }
+                Err(err) => info!("failed to load {}: {:?}", err, path),
+            };
+        } else {
+            error!("path is not a directory: {}", path.display());
+        }
+    }
+
     if let Some(matches) = matches.subcommand_matches("extract") {
-        let pathloc = matches.value_of("backup").unwrap();
-        let extract_dest = Path::new(matches.value_of("dest").unwrap());
+        let pathloc = matches.value_of("BACKUP").unwrap();
+        let extract_dest = Path::new(matches.value_of("DEST").unwrap());
         let path = find_useful_folder(pathloc);
         if path.is_dir() {
             debug!("reading backup: {:?}", &path);
@@ -305,7 +494,7 @@ fn main() {
 fn find_useful_folder(dirname: &str) -> std::path::PathBuf {
     let path = Path::new(dirname);
 
-    println!("useful? {:?}", path.display());
+    debug!("check useful? {:?}", path.display());
     if path.is_dir() {
         return dirname.into();
     }

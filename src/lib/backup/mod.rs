@@ -53,6 +53,13 @@ impl Backup<'_> {
         Ok(())
     }
 
+    pub fn get_keybag(&self) -> Option<&KeyBag> {
+        match &self.manifest.keybag {
+            Some(kb) => Some(kb),
+            None => return None,
+        }
+    }
+
     #[allow(dead_code)]
     pub fn find_fileid(&self, fileid: &str) -> Option<BackupFile> {
         for file in &self.files {
@@ -91,15 +98,16 @@ impl Backup<'_> {
             return Err(crate::lib::error::BackupError::InManifestButNotFound.into());
         }
 
-        let contents = std::fs::read(finpath).expect("contents to exist");
+        let contents = std::fs::read(&finpath).expect("contents to exist");
 
         // if the file
         if self.manifest.is_encrypted {
+            debug!("file {} is encrypted, decrypting...", finpath.display());
             match &file.fileinfo.as_ref() {
                 Some(fileinfo) => match fileinfo.encryption_key.as_ref() {
                     Some(encryption_key) => {
                         let dec = crate::lib::crypto::decrypt_with_key(&encryption_key, &contents);
-
+                        debug!("file {} is now decrypted...", finpath.display());
                         return Ok(dec);
                     }
                     None => {

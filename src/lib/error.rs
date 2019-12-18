@@ -3,6 +3,7 @@ pub enum BackupError {
     InManifestButNotFound,
     NoFileInfo,
     NoEncryptionKey,
+    FileNotFound
 }
 
 impl std::fmt::Display for BackupError {
