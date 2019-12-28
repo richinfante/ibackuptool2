@@ -28,9 +28,12 @@ impl SqliteProxy {
             None => return Err(crate::lib::BackupError::FileNotFound.into()),
         };
 
-        file.unwrap_file_key(backup);
+        if backup.manifest.is_encrypted {
+            file.unwrap_file_key(backup);
+        }
         let mut tmpfile = tempfile::NamedTempFile::new()?;
-
+        
+        trace!("sqliteproxy: read {:?} into {}", file, tmpfile.path().display());
         tmpfile.write(backup.read_file(&file).expect("read to succeed").as_slice())?;
 
         let connection = Connection::open(tmpfile.path())?;

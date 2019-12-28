@@ -6,6 +6,7 @@ extern crate serde;
 
 extern crate clap;
 use clap::{App, Arg, SubCommand};
+extern crate crypto as rust_crypto;
 
 mod lib;
 use lib::*;
@@ -48,6 +49,12 @@ fn main() {
         )
         .subcommand(
             SubCommand::with_name("infodump")
+            .arg(Arg::with_name("BYPASS-MANIFEST")
+            .long("bypass-manifest")
+            .help("Sets the backup to skip manifest for file use"))
+            .arg(Arg::with_name("FORCE-FLAT-STRUCTURE")
+            .long("force-flat-structure")
+            .help("Forces the backup to use flat structure instead of two-byte prefixed directories"))
                 .arg(
                     Arg::with_name("BACKUP")
                         .short("b")
@@ -354,10 +361,18 @@ fn main() {
         let pathloc = matches.value_of("BACKUP").unwrap();
         let dest = Path::new(matches.value_of("DEST").unwrap());
         let path = find_useful_folder(pathloc);
+        
         if path.is_dir() {
             debug!("reading backup: {:?}", &path);
             match Backup::new(&path) {
                 Ok(mut backup) => {
+                    if matches.is_present("BYPASS-MANIFEST") {
+                        backup.bypass_manifest = true;
+                    }
+
+                    if matches.is_present("FORCE-FLAT-STRUCTURE") {
+                        backup.use_old_file_convention = true;
+                    }
                     debug!(
                         "reading backup id={}, name={}, product={}, iOS={}, encrypted={:?}",
                         backup.info.target_identifier,
@@ -400,8 +415,10 @@ fn main() {
                     let files = smsr.to_text(&backup).unwrap();
 
                     for file in files {
+                        let dst = dest.join(Path::new("sms/")).join(Path::new(&file.filename.replace("/", "_")));
+                        trace!("write {} to {:?}", file.filename, dst.display());
                         std::fs::write(
-                            dest.join(Path::new("sms/")).join(Path::new(&file.filename)),
+                            dst,
                             file.contents(),
                         )
                         .unwrap();

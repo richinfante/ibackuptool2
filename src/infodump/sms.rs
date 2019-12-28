@@ -135,7 +135,7 @@ pub fn find_messages(conn: &Connection, chatid: u32) -> Vec<Message> {
     let mut out: Vec<Message> = vec![];
     let mut stmt = conn
         .prepare(
-            "SELECT chat_id, message_id, message_date FROM chat_message_join WHERE chat_id = $1",
+            "SELECT chat_id, message_id FROM chat_message_join WHERE chat_id = $1",
         )
         .unwrap();
 
@@ -285,9 +285,16 @@ impl TextOutputFormat for SMSReader {
                 } else {
                     sender_name = localize_sender_id(&index, &sender_name);
                 }
-
-                let message_epoch: u64 =
-                    ((IPHONE_2001_EPOCH + message.date / 1000000) as u64) / 1000;
+                
+                let message_epoch: u64 = match message.date < 999999999 {
+                    true => {
+                        ((IPHONE_2001_EPOCH + message.date * 1000) as u64) / 1000
+                    },
+                    false => {
+                        ((IPHONE_2001_EPOCH + message.date / 1000000) as u64) / 1000
+                    }
+                };
+                
                 trace!("got computed epoch {} to {}", message.date, message_epoch);
                 let d = UNIX_EPOCH + Duration::from_secs(message_epoch);
                 // Create DateTime from SystemTime
