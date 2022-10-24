@@ -1,5 +1,4 @@
 use crate::lib::*;
-use std::io::Write;
 
 pub struct OutFile {
     pub filename: String,

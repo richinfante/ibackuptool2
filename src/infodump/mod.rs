@@ -10,6 +10,7 @@ use crate::lib::*;
 use rusqlite::Connection;
 use std::io::Write;
 
+#[allow(unused)]
 pub struct SqliteProxy {
     pub domain: String,
     pub path: String,

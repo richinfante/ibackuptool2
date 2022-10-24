@@ -136,7 +136,14 @@ fn main() {
         None => panic!("Can't find homedir:"),
     };
 
-    let backup_dir = format!("{}{}", home_dir, BACKUP_DIRECTORY);
+    let mut backup_dir = format!("{}{}", home_dir, BACKUP_DIRECTORY);
+
+    match matches.value_of("DIR") {
+        Some(dir) => backup_dir = dir.to_string(),
+        _ => {
+            trace!("using default backup dir, --directory not specified.")
+        }
+    }
 
     trace!("using src directory: {}", backup_dir);
     let dir = Path::new(&backup_dir);
@@ -147,7 +154,7 @@ fn main() {
 
     // You can handle information about subcommands by requesting their matches by name
     // (as below), requesting just the name used, or both at the same time
-    if let Some(matches) = matches.subcommand_matches("ls") {
+    if let Some(_matches) = matches.subcommand_matches("ls") {
         let ls = std::fs::read_dir(dir).unwrap();
 
         for entry in ls {
@@ -156,7 +163,7 @@ fn main() {
                 debug!("reading backup: {:?}", entry.path());
                 let path = entry.path();
                 match Backup::new(&path) {
-                    Ok(mut backup) => {
+                    Ok(backup) => {
                         println!(
                             "id={} name={} product={} iOS={} encrypted={:?} dir={:?}",
                             backup.info.target_identifier,
@@ -212,7 +219,9 @@ fn main() {
     }
 
     if let Some(matches) = matches.subcommand_matches("ls-files") {
-        let pathloc = matches.value_of("BACKUP").unwrap();
+        let pathloc = matches
+            .value_of("BACKUP")
+            .expect("expect a backup be passed as an argument");
         let path = find_useful_folder(pathloc);
         if path.is_dir() {
             debug!("reading backup: {:?}", &path);
@@ -251,7 +260,7 @@ fn main() {
                         backup.manifest.unlock_manifest();
 
                         // Parse the manifest
-                        backup.parse_manifest().unwrap();
+                        backup.parse_manifest().expect("manifest to be parsed");
 
                         // now, unwrap all file keys in preparation of doing things; we can do this on a file-by-file basis also.
                         backup.unwrap_file_keys().unwrap();
@@ -470,7 +479,7 @@ fn main() {
                     );
 
                     let basepath = Path::new(extract_dest);
-                    std::fs::create_dir_all(&basepath);
+                    std::fs::create_dir_all(&basepath).expect("directory creation to succeed");
 
                     for file in &backup.files {
                         let filepath = basepath
@@ -479,9 +488,13 @@ fn main() {
 
                         match &backup.read_file(&file) {
                             Ok(res) => {
-                                std::fs::create_dir_all(&filepath.parent().unwrap());
+                                std::fs::create_dir_all(
+                                    &filepath.parent().expect("expect path to have a parent"),
+                                )
+                                .expect("directory creation to succeed");
                                 println!("extract: {}: {} bytes", filepath.display(), res.len());
-                                std::fs::write(filepath, res);
+                                std::fs::write(filepath, res)
+                                    .expect("to be able to write file contents");
                             }
                             Err(err) => {
                                 error!("failed to extract: {}: {}", filepath.display(), err);
