@@ -223,7 +223,7 @@ fn main() {
             .value_of("BACKUP")
             .expect("expect a backup be passed as an argument");
         let path = find_useful_folder(pathloc);
-        if path.is_dir() {
+        // if path.is_dir() {
             debug!("reading backup: {:?}", &path);
             match Backup::new(&path) {
                 Ok(mut backup) => {
@@ -283,9 +283,9 @@ fn main() {
                 }
                 Err(err) => info!("failed to load {}: {:?}", err, path),
             };
-        } else {
-            error!("path is not a directory: {}", path.display());
-        }
+        // } else {
+        //     error!("path is not a directory: {}", path.display());
+        // }
     }
 
     if let Some(matches) = matches.subcommand_matches("find") {
