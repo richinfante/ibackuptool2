@@ -4,7 +4,7 @@ use hex;
 use uuid::Uuid;
 
 use crate::lib::crypto::*;
-use ring::{digest, pbkdf2};
+use ring::{pbkdf2};
 
 #[derive(Debug)]
 pub struct KeyBag {
@@ -46,6 +46,7 @@ pub struct KeybagEntry {
 }
 
 #[derive(Debug, Clone)]
+#[allow(unused)]
 pub struct BackupKeyBagBlock {
     tag: KeybagBlockTag,
     length: usize,
@@ -168,7 +169,7 @@ impl KeyBag {
 
         // 1. Round of pbkdf2-sha256(passcode)
         pbkdf2::derive(
-            &digest::SHA256,
+            ring::pbkdf2::PBKDF2_HMAC_SHA256,
             std::num::NonZeroU32::new(dpic as u32).unwrap(),
             &double_protection_salt.as_slice(),
             passcode.as_bytes(),
@@ -183,7 +184,7 @@ impl KeyBag {
             hex::encode(&passcode1)
         );
         pbkdf2::derive(
-            &digest::SHA1,
+            ring::pbkdf2::PBKDF2_HMAC_SHA1,
             std::num::NonZeroU32::new(iterations as u32).unwrap(),
             &self.salt.as_slice(),
             passcode1.as_slice(),

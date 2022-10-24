@@ -1,18 +1,17 @@
 use crate::infodump::address::Contact;
 use crate::infodump::*;
 use crate::lib::*;
-use rusqlite::types::ToSql;
 use rusqlite::{Connection, NO_PARAMS};
-use std::fs::File;
-use std::io::{Read, Seek, SeekFrom, Write};
+use std::io::{Write};
 
 use chrono::prelude::DateTime;
 use chrono::Utc;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, UNIX_EPOCH};
 
 const IPHONE_2001_EPOCH: i64 = 978307200000;
 
 #[derive(Debug)]
+#[allow(unused)]
 pub struct Sender {
     rowid: u32,
     id: String,
@@ -31,6 +30,7 @@ impl Sender {
         }
     }
 
+    #[allow(unused)]
     fn me() -> Sender {
         Sender {
             rowid: 0,
@@ -42,6 +42,7 @@ impl Sender {
 }
 
 #[derive(Debug)]
+#[allow(unused)]
 pub struct Message {
     rowid: u32,
     from: Option<Sender>,
@@ -53,6 +54,7 @@ pub struct Message {
 }
 
 #[derive(Debug)]
+#[allow(unused)]
 pub struct Conversation {
     id: u32,
     guid: String,

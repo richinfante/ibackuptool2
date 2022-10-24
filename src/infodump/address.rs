@@ -1,8 +1,5 @@
 use rusqlite::{Connection, NO_PARAMS};
-use std::cell::RefCell;
 use std::collections::HashMap;
-pub type Phone = String;
-pub type Email = String;
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum PropertyType {
@@ -53,7 +50,7 @@ impl AddressBook {
                 let normalized = normalize_phone(&phone.1);
                 trace!("indexing: `{}` as `{}`", &phone.1, &normalized);
                 if index.contains_key(&normalized) {
-                    let mut x = index.get_mut(&normalized).unwrap();
+                    let x = index.get_mut(&normalized).unwrap();
                     x.push(cell.clone());
                 } else {
                     index.insert(normalized, vec![cell.clone()]);
@@ -63,7 +60,7 @@ impl AddressBook {
             for email in &person.emails {
                 trace!("indexing: `{}`", &email.1);
                 if index.contains_key(&email.1) {
-                    let mut x = index.get_mut(&email.1).unwrap();
+                    let x = index.get_mut(&email.1).unwrap();
                     x.push(cell.clone());
                 } else {
                     index.insert(email.1.to_string(), vec![cell.clone()]);
@@ -118,6 +115,7 @@ impl AddressBookIndexed {
     }
 }
 
+#[allow(unused)]
 impl PropertyType {
     pub fn from_id(id: i64) -> PropertyType {
         match id {
@@ -172,6 +170,7 @@ const ASSISTANT_ID: i64 = 41;
 const MANAGER_ID: i64 = 42;
 
 #[derive(Debug, PartialEq, Copy, Clone)]
+#[allow(non_camel_case_types)]
 pub enum PropertyLabel {
     Home,
     Other,
@@ -203,6 +202,7 @@ pub enum PropertyLabel {
 }
 
 impl PropertyLabel {
+    #[allow(unused)]
     pub fn from_id(id: i64) -> PropertyLabel {
         match id {
             HOME_ID => PropertyLabel::Home,
@@ -235,6 +235,7 @@ impl PropertyLabel {
         }
     }
 
+    #[allow(unused)]
     pub fn to_id(&self) -> i64 {
         match self {
             PropertyLabel::Home => HOME_ID,
@@ -285,6 +286,7 @@ fn normalize_phone(string: &str) -> String {
 }
 
 /// Normalized compare of phone numbers
+#[allow(unused)]
 pub fn heuristic_phone_same(a: &str, b: &str) -> bool {
     if a == b {
         return true;
