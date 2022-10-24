@@ -139,10 +139,10 @@ fn main() {
     let mut backup_dir = format!("{}{}", home_dir, BACKUP_DIRECTORY);
 
     match matches.value_of("DIR") {
-      Some(dir) => {
-        backup_dir = dir.to_string()
-      },
-      _ => { trace!("using default backup dir, --directory not specified.") }
+        Some(dir) => backup_dir = dir.to_string(),
+        _ => {
+            trace!("using default backup dir, --directory not specified.")
+        }
     }
 
     trace!("using src directory: {}", backup_dir);
@@ -219,7 +219,9 @@ fn main() {
     }
 
     if let Some(matches) = matches.subcommand_matches("ls-files") {
-        let pathloc = matches.value_of("BACKUP").expect("expect a backup be passed as an argument");
+        let pathloc = matches
+            .value_of("BACKUP")
+            .expect("expect a backup be passed as an argument");
         let path = find_useful_folder(pathloc);
         if path.is_dir() {
             debug!("reading backup: {:?}", &path);
@@ -486,9 +488,13 @@ fn main() {
 
                         match &backup.read_file(&file) {
                             Ok(res) => {
-                                std::fs::create_dir_all(&filepath.parent().expect("expect path to have a parent")).expect("directory creation to succeed");
+                                std::fs::create_dir_all(
+                                    &filepath.parent().expect("expect path to have a parent"),
+                                )
+                                .expect("directory creation to succeed");
                                 println!("extract: {}: {} bytes", filepath.display(), res.len());
-                                std::fs::write(filepath, res).expect("to be able to write file contents");
+                                std::fs::write(filepath, res)
+                                    .expect("to be able to write file contents");
                             }
                             Err(err) => {
                                 error!("failed to extract: {}: {}", filepath.display(), err);

@@ -4,7 +4,7 @@ use hex;
 use uuid::Uuid;
 
 use crate::lib::crypto::*;
-use ring::{pbkdf2};
+use ring::pbkdf2;
 
 #[derive(Debug)]
 pub struct KeyBag {

@@ -2,7 +2,7 @@ use crate::infodump::address::Contact;
 use crate::infodump::*;
 use crate::lib::*;
 use rusqlite::{Connection, NO_PARAMS};
-use std::io::{Write};
+use std::io::Write;
 
 use chrono::prelude::DateTime;
 use chrono::Utc;
