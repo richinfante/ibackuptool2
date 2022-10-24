@@ -5,7 +5,7 @@ authors = ["Rich Infante <rich@richinfante.com>"]
 edition = "2018"
 
 [dependencies]
-rusqlite = "0.17.0"
+rusqlite = "0.23.0"
 plist = "0.5.1"
 dirs = "1.0.5"
 rust-crypto = "^0.2"
@@ -22,3 +22,4 @@ tempfile = "3"
 rpassword = "4.0.1"
 clap = "2.33.0"
 chrono = "0.4.10"
+zip = "0.6.3"
