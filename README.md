@@ -50,3 +50,12 @@ For example:
 
 `ibackuptool2 ls-files -b ~/Documents/zipped_backup.zip`
 `ibackuptool2 ls-files -b ~/Documents/zipped_backup_folder`
+
+If you have a folder of backups stored in a non-default location, you can pass the `-d` option to find them:
+
+
+## Credits
+
+Much of this is based off of my original implementation which was written in Javascript: https://github.com/richinfante/iphonebackuptools
+
+For encryption code, I referenced the python implementation used in this post on stackoverflow: https://stackoverflow.com/questions/1498342/how-to-decrypt-an-encrypted-apple-itunes-iphone-backup
