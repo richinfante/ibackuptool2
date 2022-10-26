@@ -41,3 +41,12 @@ $ ibackuptool2 ls-files -b "6159067247acb912ceb1fbc0f54ae7d2dd693d87"
 $ ibackuptool2 extract -b "6159067247acb912ceb1fbc0f54ae7d2dd693d87" -o "./output"
 # (status output for each file that's extracted)
 ```
+
+## Loading backups from non-default path
+
+Instead of a backup ID, you can also pass a file/folder to the `-b` option, which will attempt to load the backup from that path.
+
+For example:
+
+`ibackuptool2 ls-files -b ~/Documents/zipped_backup.zip`
+`ibackuptool2 ls-files -b ~/Documents/zipped_backup_folder`

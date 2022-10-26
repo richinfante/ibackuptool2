@@ -9,10 +9,9 @@ pub use info::BackupInfo;
 pub use manifest::{BackupManifest, BackupManifestLockdown};
 pub use status::BackupStatus;
 
-use core::arch;
-use std::io::Read;
 use std::convert::TryFrom;
-use std::path::{Path, PathBuf};
+use std::io::Read;
+use std::path::{Path};
 
 use rusqlite::OpenFlags;
 use rusqlite::{Connection, NO_PARAMS};
@@ -20,13 +19,12 @@ use rusqlite::{Connection, NO_PARAMS};
 use std::cell::RefCell;
 use zip::{self, ZipArchive};
 
-
 /// Stores where this backup is physcially stored.
 /// Internal retreival can change depending on if this an actual file or a zip file
 #[derive(Debug)]
 pub enum BackupBacking {
-  Filesystem,
-  ZipFile(RefCell<ZipArchive<std::fs::File>>)
+    Filesystem,
+    ZipFile(RefCell<ZipArchive<std::fs::File>>),
 }
 
 #[derive(Debug)]
@@ -40,51 +38,67 @@ pub struct Backup<'a> {
     pub backing: BackupBacking,
 }
 
+fn read_archive_file(
+    archive: &mut zip::ZipArchive<std::fs::File>,
+    path: &str,
+) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+    let mut res: Vec<u8> = vec![];
+    archive.by_name(path)?.read_to_end(&mut res)?;
 
-fn read_archive_file(archive: &mut zip::ZipArchive<std::fs::File>, path: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-  let mut res : Vec<u8> = vec![];
-  archive.by_name(path)?.read_to_end(&mut res)?;
-
-  Ok(res)
+    Ok(res)
 }
 
 impl Backup<'_> {
     /// Create from root backup path.
     pub fn new(path: &Path) -> Result<Backup, Box<dyn std::error::Error>> {
-        let mut status;
-        let mut manifest;
-        let mut info;
+        let status;
+        let manifest;
+        let info;
         let mut relative_root: Option<String> = None;
         let mut backing = BackupBacking::Filesystem;
 
         if path.is_file() && path.extension().and_then(std::ffi::OsStr::to_str) == Some("zip") {
-          let mut archive = zip::ZipArchive::new(std::fs::File::open(path)?)?;
+            let mut archive = zip::ZipArchive::new(std::fs::File::open(path)?)?;
 
-          let names = archive.file_names().map(|v| v.to_string()).collect::<Vec<String>>();
-          let mut root_path: Option<String> = None;
+            let names = archive
+                .file_names()
+                .map(|v| v.to_string())
+                .collect::<Vec<String>>();
+            let mut root_path: Option<String> = None;
 
-          for name in names {
-            if name.ends_with("Manifest.plist") {
-              println!("{}", name);
-              let path = Path::new(&name);
-              root_path = path.parent().and_then(|v| v.as_os_str().to_str().and_then(|v| Some(v.to_string())));
-              debug!("found zip root: {:?}", path.parent());
-              break;
+            for name in names {
+                if name.ends_with("Manifest.plist") {
+                    println!("{}", name);
+                    let path = Path::new(&name);
+                    root_path = path
+                        .parent()
+                        .and_then(|v| v.as_os_str().to_str().and_then(|v| Some(v.to_string())));
+                    debug!("found zip root: {:?}", path.parent());
+                    break;
+                }
             }
-          }
 
-          let zip_root = match root_path {
+            let zip_root = match root_path {
             Some(v) => v,
             None => panic!("could not find the Manifest.plist inside the zip file. Is this actually a backup?")
           };
 
-          status = plist::from_bytes(&read_archive_file(&mut archive, &format!("{}/Status.plist", &zip_root))?)?;
-          info = plist::from_bytes(&read_archive_file(&mut archive, &format!("{}/Info.plist", &zip_root))?)?;
-          manifest = plist::from_bytes(&read_archive_file(&mut archive, &format!("{}/Manifest.plist", &zip_root))?)?;
+            status = plist::from_bytes(&read_archive_file(
+                &mut archive,
+                &format!("{}/Status.plist", &zip_root),
+            )?)?;
+            info = plist::from_bytes(&read_archive_file(
+                &mut archive,
+                &format!("{}/Info.plist", &zip_root),
+            )?)?;
+            manifest = plist::from_bytes(&read_archive_file(
+                &mut archive,
+                &format!("{}/Manifest.plist", &zip_root),
+            )?)?;
 
-          // init ctrl vars
-          relative_root = Some(zip_root);
-          backing = BackupBacking::ZipFile(RefCell::new(archive));
+            // init ctrl vars
+            relative_root = Some(zip_root);
+            backing = BackupBacking::ZipFile(RefCell::new(archive));
         } else {
             status = plist::from_file(format!("{}/Status.plist", path.to_str().unwrap()))?;
             info = plist::from_file(format!("{}/Info.plist", path.to_str().unwrap()))?;
@@ -98,10 +112,9 @@ impl Backup<'_> {
             info,
             relative_root,
             files: vec![],
-            backing
+            backing,
         })
     }
-
 
     /// Parse the keybag contained in the manifest.
     pub fn parse_keybag(&mut self) -> Result<(), Box<dyn std::error::Error>> {
@@ -142,23 +155,24 @@ impl Backup<'_> {
     }
 
     pub fn raw_file_read(&self, path: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-      match &self.backing {
-        BackupBacking::Filesystem => {
-          // prepend fs path
-          let finpath = self.path.join(Path::new(&path));
-          if !finpath.is_file() {
-              return Err(crate::lib::error::BackupError::InManifestButNotFound.into());
-          }
+        match &self.backing {
+            BackupBacking::Filesystem => {
+                // prepend fs path
+                let finpath = self.path.join(Path::new(&path));
+                if !finpath.is_file() {
+                    return Err(crate::lib::error::BackupError::InManifestButNotFound.into());
+                }
 
-          Ok(std::fs::read(&finpath)?)
-        },
-        BackupBacking::ZipFile(archive) => {
-          read_archive_file(&mut archive.borrow_mut(), &match &self.relative_root {
-            Some(rootpath) => format!("{}/{}", rootpath, path),
-            None => path.to_string()
-          })
+                Ok(std::fs::read(&finpath)?)
+            }
+            BackupBacking::ZipFile(archive) => read_archive_file(
+                &mut archive.borrow_mut(),
+                &match &self.relative_root {
+                    Some(rootpath) => format!("{}/{}", rootpath, path),
+                    None => path.to_string(),
+                },
+            ),
         }
-      }
     }
 
     #[allow(dead_code)]
@@ -229,7 +243,7 @@ impl Backup<'_> {
 
         {
             if self.manifest.is_encrypted {
-              let contents = self.raw_file_read("Manifest.db")?;
+                let contents = self.raw_file_read("Manifest.db")?;
 
                 // let path = format!("{}/Manifest.db", self.path.to_str().unwrap());
                 // let contents = std::fs::read(Path::new(&path)).unwrap();
