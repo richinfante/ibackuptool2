@@ -223,291 +223,276 @@ fn main() {
             .value_of("BACKUP")
             .expect("expect a backup be passed as an argument");
         let path = find_useful_folder(pathloc);
-        // if path.is_dir() {
-            debug!("reading backup: {:?}", &path);
-            match Backup::new(&path) {
-                Ok(mut backup) => {
-                    println!(
-                        "reading backup id={}, name={}, product={}, iOS={}, encrypted={:?}",
-                        backup.info.target_identifier,
-                        &backup
-                            .info
-                            .device_name
-                            .as_ref()
-                            .unwrap_or(&"<unnamed device>".to_string()),
-                        &backup
-                            .info
-                            .product_name
-                            .as_ref()
-                            .unwrap_or(&"<unknown product>".to_string()),
-                        backup.info.product_version,
-                        &backup.manifest.is_encrypted
-                    );
+        debug!("reading backup: {:?}", &path);
+        match Backup::new(&path) {
+            Ok(mut backup) => {
+                println!(
+                    "reading backup id={}, name={}, product={}, iOS={}, encrypted={:?}",
+                    backup.info.target_identifier,
+                    &backup
+                        .info
+                        .device_name
+                        .as_ref()
+                        .unwrap_or(&"<unnamed device>".to_string()),
+                    &backup
+                        .info
+                        .product_name
+                        .as_ref()
+                        .unwrap_or(&"<unknown product>".to_string()),
+                    backup.info.product_version,
+                    &backup.manifest.is_encrypted
+                );
 
-                    if backup.manifest.is_encrypted {
-                        // Parse the manifest keybag
-                        backup.parse_keybag().unwrap();
-                        debug!("trying decrypt of backup keybag");
+                if backup.manifest.is_encrypted {
+                    // Parse the manifest keybag
+                    backup.parse_keybag().unwrap();
+                    debug!("trying decrypt of backup keybag");
 
-                        // Unlock the keybag with password
-                        if let Some(ref mut kb) = backup.manifest.keybag.as_mut() {
-                            let pass = rpassword::read_password_from_tty(Some("Backup Password: "))
-                                .unwrap();
-                            kb.unlock_with_passcode(&pass); // TODO:
-                        }
-
-                        // Unlock the manifest key
-                        backup.manifest.unlock_manifest();
-
-                        // Parse the manifest
-                        backup.parse_manifest().expect("manifest to be parsed");
-
-                        // now, unwrap all file keys in preparation of doing things; we can do this on a file-by-file basis also.
-                        backup.unwrap_file_keys().unwrap();
-                    } else {
-                        backup.parse_manifest().unwrap();
+                    // Unlock the keybag with password
+                    if let Some(ref mut kb) = backup.manifest.keybag.as_mut() {
+                        let pass =
+                            rpassword::read_password_from_tty(Some("Backup Password: ")).unwrap();
+                        kb.unlock_with_passcode(&pass); // TODO:
                     }
 
-                    info!("loaded {} files from manifest", backup.files.len());
-                    info!(
-                        "loaded: {} domains from manifest",
-                        list_domains(&backup).len()
-                    );
+                    // Unlock the manifest key
+                    backup.manifest.unlock_manifest();
 
-                    for file in backup.files {
-                        println!(
-                            "{}: {}, {}",
-                            file.fileid, file.domain, file.relative_filename
-                        );
-                    }
+                    // Parse the manifest
+                    backup.parse_manifest().expect("manifest to be parsed");
+
+                    // now, unwrap all file keys in preparation of doing things; we can do this on a file-by-file basis also.
+                    backup.unwrap_file_keys().unwrap();
+                } else {
+                    backup.parse_manifest().unwrap();
                 }
-                Err(err) => info!("failed to load {}: {:?}", err, path),
-            };
-        // } else {
-        //     error!("path is not a directory: {}", path.display());
-        // }
+
+                info!("loaded {} files from manifest", backup.files.len());
+                info!(
+                    "loaded: {} domains from manifest",
+                    list_domains(&backup).len()
+                );
+
+                for file in backup.files {
+                    println!(
+                        "{}: {}, {}",
+                        file.fileid, file.domain, file.relative_filename
+                    );
+                }
+            }
+            Err(err) => info!("failed to load {}: {:?}", err, path),
+        };
     }
 
     if let Some(matches) = matches.subcommand_matches("find") {
         let pathloc = matches.value_of("BACKUP").unwrap();
         let path = find_useful_folder(pathloc);
-        if path.is_dir() {
-            debug!("reading backup: {:?}", &path);
-            match Backup::new(&path) {
-                Ok(mut backup) => {
-                    debug!(
-                        "reading backup id={}, name={}, product={}, iOS={}, encrypted={:?}",
-                        backup.info.target_identifier,
-                        &backup
-                            .info
-                            .device_name
-                            .as_ref()
-                            .unwrap_or(&"<unnamed device>".to_string()),
-                        &backup
-                            .info
-                            .product_name
-                            .as_ref()
-                            .unwrap_or(&"<unknown product>".to_string()),
-                        backup.info.product_version,
-                        &backup.manifest.is_encrypted
-                    );
 
-                    if backup.manifest.is_encrypted {
-                        // Parse the manifest keybag
-                        backup.parse_keybag().unwrap();
-                        debug!("trying decrypt of backup keybag");
+        debug!("reading backup: {:?}", &path);
+        match Backup::new(&path) {
+            Ok(mut backup) => {
+                debug!(
+                    "reading backup id={}, name={}, product={}, iOS={}, encrypted={:?}",
+                    backup.info.target_identifier,
+                    &backup
+                        .info
+                        .device_name
+                        .as_ref()
+                        .unwrap_or(&"<unnamed device>".to_string()),
+                    &backup
+                        .info
+                        .product_name
+                        .as_ref()
+                        .unwrap_or(&"<unknown product>".to_string()),
+                    backup.info.product_version,
+                    &backup.manifest.is_encrypted
+                );
 
-                        // Unlock the keybag with password
-                        if let Some(ref mut kb) = backup.manifest.keybag.as_mut() {
-                            let pass = rpassword::read_password_from_tty(Some("Backup Password: "))
-                                .unwrap();
-                            kb.unlock_with_passcode(&pass); // TODO:
-                        }
+                if backup.manifest.is_encrypted {
+                    // Parse the manifest keybag
+                    backup.parse_keybag().unwrap();
+                    debug!("trying decrypt of backup keybag");
 
-                        // Unlock the manifest key
-                        backup.manifest.unlock_manifest();
-
-                        // Parse the manifest
-                        backup.parse_manifest().unwrap();
-                    } else {
-                        backup.parse_manifest().unwrap();
+                    // Unlock the keybag with password
+                    if let Some(ref mut kb) = backup.manifest.keybag.as_mut() {
+                        let pass =
+                            rpassword::read_password_from_tty(Some("Backup Password: ")).unwrap();
+                        kb.unlock_with_passcode(&pass); // TODO:
                     }
 
-                    let mut file = backup
-                        .find_path(
-                            matches.value_of("DOMAIN").expect("--domain to be provided"),
-                            matches.value_of("PATH").expect("--path to be provided"),
-                        )
-                        .expect("File to exist");
+                    // Unlock the manifest key
+                    backup.manifest.unlock_manifest();
 
-                    if backup.manifest.is_encrypted {
-                        file.unwrap_file_key(&backup);
-                    }
-
-                    match backup.read_file(&file) {
-                        Ok(contents) => match std::io::stdout().write(&contents) {
-                            Ok(_) => {}
-                            Err(err) => error!("error: {}", err),
-                        },
-                        Err(err) => error!("error: {}", err),
-                    }
+                    // Parse the manifest
+                    backup.parse_manifest().unwrap();
+                } else {
+                    backup.parse_manifest().unwrap();
                 }
-                Err(err) => info!("failed to load {}: {:?}", err, path),
-            };
-        } else {
-            error!("path is not a directory: {}", path.display());
-        }
+
+                let mut file = backup
+                    .find_path(
+                        matches.value_of("DOMAIN").expect("--domain to be provided"),
+                        matches.value_of("PATH").expect("--path to be provided"),
+                    )
+                    .expect("File to exist");
+
+                if backup.manifest.is_encrypted {
+                    file.unwrap_file_key(&backup);
+                }
+
+                match backup.read_file(&file) {
+                    Ok(contents) => match std::io::stdout().write(&contents) {
+                        Ok(_) => {}
+                        Err(err) => error!("error: {}", err),
+                    },
+                    Err(err) => error!("error: {}", err),
+                }
+            }
+            Err(err) => info!("failed to load {}: {:?}", err, path),
+        };
     }
 
     if let Some(matches) = matches.subcommand_matches("infodump") {
         let pathloc = matches.value_of("BACKUP").unwrap();
         let dest = Path::new(matches.value_of("DEST").unwrap());
         let path = find_useful_folder(pathloc);
-        if path.is_dir() {
-            debug!("reading backup: {:?}", &path);
-            match Backup::new(&path) {
-                Ok(mut backup) => {
-                    debug!(
-                        "reading backup id={}, name={}, product={}, iOS={}, encrypted={:?}",
-                        backup.info.target_identifier,
-                        &backup
-                            .info
-                            .device_name
-                            .as_ref()
-                            .unwrap_or(&"<unnamed device>".to_string()),
-                        &backup
-                            .info
-                            .product_name
-                            .as_ref()
-                            .unwrap_or(&"<unknown product>".to_string()),
-                        backup.info.product_version,
-                        &backup.manifest.is_encrypted
-                    );
+        debug!("reading backup: {:?}", &path);
+        match Backup::new(&path) {
+            Ok(mut backup) => {
+                debug!(
+                    "reading backup id={}, name={}, product={}, iOS={}, encrypted={:?}",
+                    backup.info.target_identifier,
+                    &backup
+                        .info
+                        .device_name
+                        .as_ref()
+                        .unwrap_or(&"<unnamed device>".to_string()),
+                    &backup
+                        .info
+                        .product_name
+                        .as_ref()
+                        .unwrap_or(&"<unknown product>".to_string()),
+                    backup.info.product_version,
+                    &backup.manifest.is_encrypted
+                );
 
-                    if backup.manifest.is_encrypted {
-                        // Parse the manifest keybag
-                        backup.parse_keybag().unwrap();
-                        debug!("trying decrypt of backup keybag");
+                if backup.manifest.is_encrypted {
+                    // Parse the manifest keybag
+                    backup.parse_keybag().unwrap();
+                    debug!("trying decrypt of backup keybag");
 
-                        // Unlock the keybag with password
-                        if let Some(ref mut kb) = backup.manifest.keybag.as_mut() {
-                            let pass = rpassword::read_password_from_tty(Some("Backup Password: "))
-                                .unwrap();
-                            kb.unlock_with_passcode(&pass); // TODO:
-                        }
-
-                        // Unlock the manifest key
-                        backup.manifest.unlock_manifest();
-
-                        // Parse the manifest
-                        backup.parse_manifest().unwrap();
-                    } else {
-                        backup.parse_manifest().unwrap();
+                    // Unlock the keybag with password
+                    if let Some(ref mut kb) = backup.manifest.keybag.as_mut() {
+                        let pass =
+                            rpassword::read_password_from_tty(Some("Backup Password: ")).unwrap();
+                        kb.unlock_with_passcode(&pass); // TODO:
                     }
 
-                    let smsr = infodump::SMSReader::load(&backup).unwrap();
-                    let files = smsr.to_text(&backup).unwrap();
+                    // Unlock the manifest key
+                    backup.manifest.unlock_manifest();
 
-                    for file in files {
-                        std::fs::write(
-                            dest.join(Path::new("sms/")).join(Path::new(&file.filename)),
-                            file.contents(),
-                        )
-                        .unwrap();
-                    }
+                    // Parse the manifest
+                    backup.parse_manifest().unwrap();
+                } else {
+                    backup.parse_manifest().unwrap();
                 }
-                Err(err) => info!("failed to load {}: {:?}", err, path),
-            };
-        } else {
-            error!("path is not a directory: {}", path.display());
-        }
+
+                let smsr = infodump::SMSReader::load(&backup).unwrap();
+                let files = smsr.to_text(&backup).unwrap();
+
+                for file in files {
+                    std::fs::write(
+                        dest.join(Path::new("sms/")).join(Path::new(&file.filename)),
+                        file.contents(),
+                    )
+                    .unwrap();
+                }
+            }
+            Err(err) => info!("failed to load {}: {:?}", err, path),
+        };
     }
 
     if let Some(matches) = matches.subcommand_matches("extract") {
         let pathloc = matches.value_of("BACKUP").unwrap();
         let extract_dest = Path::new(matches.value_of("DEST").unwrap());
         let path = find_useful_folder(pathloc);
-        if path.is_dir() {
-            debug!("reading backup: {:?}", &path);
-            match Backup::new(&path) {
-                Ok(mut backup) => {
-                    println!(
-                        "reading backup id={}, name={}, product={}, iOS={}, encrypted={:?}",
-                        backup.info.target_identifier,
-                        &backup
-                            .info
-                            .device_name
-                            .as_ref()
-                            .unwrap_or(&"<unnamed device>".to_string()),
-                        &backup
-                            .info
-                            .product_name
-                            .as_ref()
-                            .unwrap_or(&"<unknown product>".to_string()),
-                        backup.info.product_version,
-                        &backup.manifest.is_encrypted
-                    );
+        debug!("reading backup: {:?}", &path);
+        match Backup::new(&path) {
+            Ok(mut backup) => {
+                println!(
+                    "reading backup id={}, name={}, product={}, iOS={}, encrypted={:?}",
+                    backup.info.target_identifier,
+                    &backup
+                        .info
+                        .device_name
+                        .as_ref()
+                        .unwrap_or(&"<unnamed device>".to_string()),
+                    &backup
+                        .info
+                        .product_name
+                        .as_ref()
+                        .unwrap_or(&"<unknown product>".to_string()),
+                    backup.info.product_version,
+                    &backup.manifest.is_encrypted
+                );
 
-                    if backup.manifest.is_encrypted {
-                        // Parse the manifest keybag
-                        backup.parse_keybag().unwrap();
-                        debug!("trying decrypt of backup keybag");
+                if backup.manifest.is_encrypted {
+                    // Parse the manifest keybag
+                    backup.parse_keybag().unwrap();
+                    debug!("trying decrypt of backup keybag");
 
-                        // Unlock the keybag with password
-                        if let Some(ref mut kb) = backup.manifest.keybag.as_mut() {
-                            let pass = rpassword::read_password_from_tty(Some("Backup Password: "))
-                                .unwrap();
-                            kb.unlock_with_passcode(&pass); // TODO:
-                        }
-
-                        // Unlock the manifest key
-                        backup.manifest.unlock_manifest();
-
-                        // Parse the manifest
-                        backup.parse_manifest().unwrap();
-
-                        // now, unwrap all file keys in preparation of doing things; we can do this on a file-by-file basis also.
-                        backup.unwrap_file_keys().unwrap();
-                    } else {
-                        backup.parse_manifest().unwrap();
+                    // Unlock the keybag with password
+                    if let Some(ref mut kb) = backup.manifest.keybag.as_mut() {
+                        let pass =
+                            rpassword::read_password_from_tty(Some("Backup Password: ")).unwrap();
+                        kb.unlock_with_passcode(&pass); // TODO:
                     }
 
-                    info!("loaded {} files from manifest", backup.files.len());
-                    info!(
-                        "loaded: {} domains from manifest",
-                        list_domains(&backup).len()
-                    );
+                    // Unlock the manifest key
+                    backup.manifest.unlock_manifest();
 
-                    let basepath = Path::new(extract_dest);
-                    std::fs::create_dir_all(&basepath).expect("directory creation to succeed");
+                    // Parse the manifest
+                    backup.parse_manifest().unwrap();
 
-                    for file in &backup.files {
-                        let filepath = basepath
-                            .join(Path::new(&file.domain))
-                            .join(Path::new(&file.relative_filename));
-
-                        match &backup.read_file(&file) {
-                            Ok(res) => {
-                                std::fs::create_dir_all(
-                                    &filepath.parent().expect("expect path to have a parent"),
-                                )
-                                .expect("directory creation to succeed");
-                                println!("extract: {}: {} bytes", filepath.display(), res.len());
-                                std::fs::write(filepath, res)
-                                    .expect("to be able to write file contents");
-                            }
-                            Err(err) => {
-                                error!("failed to extract: {}: {}", filepath.display(), err);
-                            }
-                        }
-                        // println!("{}: {}, {}", file.fileid, file.domain, file.relative_filename);
-                    }
+                    // now, unwrap all file keys in preparation of doing things; we can do this on a file-by-file basis also.
+                    backup.unwrap_file_keys().unwrap();
+                } else {
+                    backup.parse_manifest().unwrap();
                 }
-                Err(err) => info!("failed to load {}: {:?}", err, path),
-            };
-        } else {
-            error!("path is not a directory: {}", path.display());
-        }
+
+                info!("loaded {} files from manifest", backup.files.len());
+                info!(
+                    "loaded: {} domains from manifest",
+                    list_domains(&backup).len()
+                );
+
+                let basepath = Path::new(extract_dest);
+                std::fs::create_dir_all(&basepath).expect("directory creation to succeed");
+
+                for file in &backup.files {
+                    let filepath = basepath
+                        .join(Path::new(&file.domain))
+                        .join(Path::new(&file.relative_filename));
+
+                    match &backup.read_file(&file) {
+                        Ok(res) => {
+                            std::fs::create_dir_all(
+                                &filepath.parent().expect("expect path to have a parent"),
+                            )
+                            .expect("directory creation to succeed");
+                            println!("extract: {}: {} bytes", filepath.display(), res.len());
+                            std::fs::write(filepath, res)
+                                .expect("to be able to write file contents");
+                        }
+                        Err(err) => {
+                            error!("failed to extract: {}: {}", filepath.display(), err);
+                        }
+                    }
+                    // println!("{}: {}, {}", file.fileid, file.domain, file.relative_filename);
+                }
+            }
+            Err(err) => info!("failed to load {}: {:?}", err, path),
+        };
     }
 }
 
