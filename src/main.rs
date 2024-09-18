@@ -116,7 +116,14 @@ fn main() {
                         .value_name("DEST")
                         .help("Extract Destination.")
                         .takes_value(true),
-                ),
+                )
+                .arg(
+                    Arg::with_name("FILTER")
+                        .long("filter")
+                        .value_name("FILTER")
+                        .help("substring filtering for domain/filename")
+                        .takes_value(true),
+                )
         )
         .get_matches();
 
@@ -415,6 +422,7 @@ fn main() {
     if let Some(matches) = matches.subcommand_matches("extract") {
         let pathloc = matches.value_of("BACKUP").unwrap();
         let extract_dest = Path::new(matches.value_of("DEST").unwrap());
+        let filter : Option<&str> = matches.value_of("FILTER");
         let path = find_useful_folder(pathloc);
         debug!("reading backup: {:?}", &path);
         match Backup::new(&path) {
@@ -470,6 +478,13 @@ fn main() {
                 std::fs::create_dir_all(&basepath).expect("directory creation to succeed");
 
                 for file in &backup.files {
+                    if let Some(filter) = filter {
+                        if !file.domain.contains(filter) && !file.relative_filename.contains(filter) {
+                            debug!("skipping file: {} - filter not matched.", file.relative_filename);
+                            continue;
+                        }
+                    }
+
                     let filepath = basepath
                         .join(Path::new(&file.domain))
                         .join(Path::new(&file.relative_filename));

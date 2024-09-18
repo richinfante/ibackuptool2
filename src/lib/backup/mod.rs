@@ -2,12 +2,15 @@ mod file;
 mod info;
 mod manifest;
 mod status;
+mod mbdb_manifest;
+mod manifest_sqlite;
 
 use crate::lib::crypto::*;
 pub use file::{BackupFile, FileInfo};
 pub use info::BackupInfo;
 pub use manifest::{BackupManifest, BackupManifestLockdown};
 pub use status::BackupStatus;
+pub use mbdb_manifest::{ManifestMbdb, ManifestMbdbEntry, parse_manifest};
 
 use std::convert::TryFrom;
 use std::io::Read;
@@ -83,14 +86,19 @@ impl Backup<'_> {
             None => panic!("could not find the Manifest.plist inside the zip file. Is this actually a backup?")
           };
 
+            debug!("loading status from zip...");
             status = plist::from_bytes(&read_archive_file(
                 &mut archive,
                 &format!("{}/Status.plist", &zip_root),
             )?)?;
+
+            debug!("loading info from zip...");
             info = plist::from_bytes(&read_archive_file(
                 &mut archive,
                 &format!("{}/Info.plist", &zip_root),
             )?)?;
+
+            debug!("loading manifest from zip...");
             manifest = plist::from_bytes(&read_archive_file(
                 &mut archive,
                 &format!("{}/Manifest.plist", &zip_root),
@@ -104,6 +112,8 @@ impl Backup<'_> {
             info = plist::from_file(format!("{}/Info.plist", path.to_str().unwrap()))?;
             manifest = plist::from_file(format!("{}/Manifest.plist", path.to_str().unwrap()))?;
         }
+
+        debug!("init complete!");
 
         Ok(Backup {
             path: Box::new(path.clone()),
@@ -154,6 +164,9 @@ impl Backup<'_> {
         return None;
     }
 
+    /// Read a file's raw contents from the disk, or zip file
+    /// The path should be the relative path to either the zip file, 
+    /// or relative to the base of the backup directory
     pub fn raw_file_read(&self, path: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
         match &self.backing {
             BackupBacking::Filesystem => {
@@ -175,18 +188,35 @@ impl Backup<'_> {
         }
     }
 
+    /// Read the contents of a specific entry in a file.
+    /// Where applicable (newer style backups), this also performs decryption as needed.
     #[allow(dead_code)]
     pub fn read_file(&self, file: &BackupFile) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
         let path = format!(
-            "{}/{}/{}",
-            self.path.to_str().expect("path to be str"),
+            "{}/{}",
             (&file.fileid)[0..2].to_string(),
             file.fileid
         );
 
-        debug!("read backup file path: {}", path);
+        let legacy_path = format!(
+            "{}",
+            file.fileid
+        );
 
-        let contents = self.raw_file_read(&path)?;
+        debug!("read backup file path: {} in {}", file.fileid, self.path.display());
+        debug!("{} and {} are tgts", path, legacy_path);
+
+        let contents = match self.raw_file_read(&path) {
+            Ok(v) => v,
+            Err(e) => {
+                match self.raw_file_read(&legacy_path) {
+                    Ok(v) => v,
+                    Err(e) => { return Err(e) }
+                }
+            }
+        };
+
+        debug!("got file contents len: {}", contents.len());
 
         // if the file
         if self.manifest.is_encrypted {
@@ -206,12 +236,11 @@ impl Backup<'_> {
                     return Err(crate::lib::error::BackupError::NoFileInfo.into());
                 }
             }
+        } else {
+            return Ok(contents)
         }
 
-        return match std::fs::read(Path::new(&path)) {
-            Ok(vec) => Ok(vec),
-            Err(err) => Err(err.into()),
-        };
+        
     }
 
     /// Unwrap all individual file encryption keys
@@ -237,84 +266,13 @@ impl Backup<'_> {
     pub fn parse_manifest(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         self.files.clear();
 
-        let conn: Connection;
-        let tmpf = tempfile::TempDir::new()?;
-        let decpath = tmpf.path().join("manifest.db");
+        let res = manifest_sqlite::parse_manifest(self);
 
-        {
-            if self.manifest.is_encrypted {
-                let contents = self.raw_file_read("Manifest.db")?;
-
-                // let path = format!("{}/Manifest.db", self.path.to_str().unwrap());
-                // let contents = std::fs::read(Path::new(&path)).unwrap();
-                let decrypted_db = crate::lib::crypto::decrypt_with_key(
-                    &self.manifest.manifest_key_unwrapped.as_ref().unwrap(),
-                    &contents,
-                );
-                debug!("decrypted {} bytes from manifest.", decrypted_db.len());
-
-                trace!("writing decrypted database: {}", decpath.display());
-                // let decpath = Path::new(&pth);
-                std::fs::write(&decpath, decrypted_db)?;
-
-                // NOTE:
-                // this is opened read write.
-                // I have *no idea* why readonly does this, but it failes every time with "cannot open databsse", code 14.
-                // since this is a copy, it's read write
-                conn = Connection::open_with_flags(&decpath, OpenFlags::SQLITE_OPEN_READ_WRITE)?;
-                trace!("wrote decrypted database to tmp: {}", decpath.display());
-
-                // std::thread::sleep(std::time::Duration::from_secs(15));
-            } else {
-                conn = Connection::open_with_flags(
-                    format!("{}/Manifest.db", self.path.to_str().unwrap()),
-                    OpenFlags::SQLITE_OPEN_READ_ONLY,
-                )?;
-            }
-
-            let mut stmt =
-                conn.prepare("SELECT fileid, domain, relativePath, flags, file from Files")?;
-            let rows = stmt
-                .query_map(NO_PARAMS, |row| {
-                    // fileid equals sha1(format!("{}-{}", domain, relative_filename))
-                    let fileid: String = row.get(0)?;
-                    let domain: String = row.get(1)?;
-                    let relative_filename: String = row.get(2)?;
-                    let flags: i64 = row.get(3)?;
-                    let file: Vec<u8> = row.get(4)?;
-                    use plist::Value;
-
-                    let cur = std::io::Cursor::new(file);
-                    let val = Value::from_reader(cur).expect("expected to load bplist");
-
-                    let fileinfo = match FileInfo::try_from(val) {
-                        Ok(res) => Some(res),
-                        Err(err) => {
-                            error!("failed to parse file info: {}", err);
-                            None
-                        }
-                    };
-
-                    Ok(BackupFile {
-                        fileid,
-                        domain,
-                        relative_filename,
-                        flags,
-                        fileinfo,
-                    })
-                })
-                .expect("Query to succeed");
-
-            // Add each item to the internal list
-            for item in rows {
-                if let Ok(item) = item {
-                    self.files.push(item);
-                }
-            }
+        if res.is_err() {
+            mbdb_manifest::parse_manifest(self)?;
         }
 
-        tmpf.close()?;
-
+        
         Ok(())
     }
 }
